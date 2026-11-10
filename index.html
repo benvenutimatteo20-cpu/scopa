@@ -152,6 +152,10 @@ label{display:flex; flex-direction:column; gap:7px; font-size:.82rem; color:var(
 .flash .arrow{font-size:1.4rem; color:var(--gold); padding:0 4px}
 .flash .ttl{font-family:var(--display); font-size:1.5rem; color:var(--gold)}
 .flash .ttl.big{font-size:2.4rem}
+#herr:empty{display:none}
+.panel.live{border-color:var(--gold); box-shadow:0 0 0 1px rgba(230,180,80,.25), 0 10px 30px rgba(0,0,0,.3)}
+.dot{width:10px; height:10px; border-radius:50%; background:#5fd38a; box-shadow:0 0 0 0 rgba(95,211,138,.6); animation:live 1.6s infinite}
+@keyframes live{0%{box-shadow:0 0 0 0 rgba(95,211,138,.6)}100%{box-shadow:0 0 0 10px rgba(95,211,138,0)}}
 .tablecards .card{cursor:default}
 .tablecards .card.opt{cursor:pointer}
 .tablecards .card.picked{box-shadow:0 0 0 4px #fff, 0 0 0 7px var(--gold), 0 10px 20px rgba(0,0,0,.45); transform:translateY(-8px)}
@@ -464,7 +468,8 @@ const ALPH = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
 const randCode = (n = 5) => Array.from(crypto.getRandomValues(new Uint8Array(n)), b => ALPH[b % ALPH.length]).join('');
 const randToken = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join('');
 const peerId = code => 'scopa-tra-amici-' + code.toLowerCase();
-const inviteLink = code => location.origin + location.pathname + '#' + code;
+const TABLE = 'MGX7K';   // one shared table for the group: whoever opens the app finds the game here
+const inviteLink = () => location.origin + location.pathname;
 const AV = ['#e6b450', '#e98a6b', '#8fc7e8', '#a9d98b'];
 const avatar = (nick, seat) => `<span class="avatar" style="--av:${AV[seat % 4]}">${esc((nick || '?').trim().charAt(0).toUpperCase())}</span>`;
 async function keepAwake() { try { await navigator.wakeLock?.request('screen'); } catch {} }
@@ -499,8 +504,10 @@ function broadcast() {
   V = viewFor(0); render();
   if (S.game === 'briscola' && S.hand?.trickDone && !trickT) trickT = setTimeout(() => { trickT = null; resolveTrick(S); broadcast(); }, 1900);
 }
+let hostFresh = false;
 function startHost(c, pw, nick, game, nPlayers, target, resumeState) {
-  role = 'host'; code = c; password = pw; mySeat = 0;
+  stopProbe();
+  role = 'host'; code = TABLE; password = pw; mySeat = 0; hostFresh = !resumeState;
   S = resumeState || { game, nPlayers, target, status: 'lobby', players: [{ seat: 0, nick, token: 'host' }], scores: {}, hand: null, result: null, dealer: 0 };
   S.game ||= 'scopa';
   keepAwake(); openHostPeer(); broadcast();
@@ -508,7 +515,7 @@ function startHost(c, pw, nick, game, nPlayers, target, resumeState) {
 function openHostPeer() {
   if (peer) { try { peer.destroy(); } catch {} }
   peer = new Peer(peerId(code));
-  peer.on('open', () => { netOk = true; render(); });
+  peer.on('open', () => { netOk = true; hostFresh = false; render(); });
   peer.on('connection', c => {
     c.on('data', m => onHostMsg(c, m));
     c.on('close', () => { for (const k in conns) if (conns[k] === c) delete conns[k]; if (role === 'host') broadcast(); });
@@ -517,13 +524,19 @@ function openHostPeer() {
   peer.on('error', e => {
     netOk = false; render();
     if (['unavailable-id', 'network', 'server-error', 'socket-error', 'socket-closed'].includes(e.type)) {
-      if (e.type === 'unavailable-id') toast('Il codice è ancora occupato, riprovo…');
+      if (e.type === 'unavailable-id' && hostFresh) { role = 'off'; try { peer.destroy(); } catch {} peer = null; lsDel('scopa.host'); return goHome('C\'è già una partita aperta: entra in quella con la password.'); }
+      if (e.type === 'unavailable-id') toast('Il tavolo si sta liberando, riprovo…');
       clearTimeout(retryT); retryT = setTimeout(() => { if (role === 'host') openHostPeer(); }, 4000);
     }
   });
 }
 function onHostMsg(c, m) {
   if (!m || typeof m !== 'object') return;
+  if (m.t === 'peek') {
+    c.send({ t: 'info', info: { host: S.players[0].nick, game: S.game, nPlayers: S.nPlayers, target: S.target, status: S.status,
+      players: S.players.map(p => p.nick), free: allowedNames(S.nPlayers).filter(nm => !S.players.some(p => p.nick === nm)) } });
+    return;
+  }
   if (m.t === 'join') {
     if (String(m.pw) !== password) { c.send({ t: 'err', m: 'Password sbagliata.' }); setTimeout(() => c.close(), 300); return; }
     let p = S.players.find(x => x.token === m.token && x.seat !== 0);
@@ -568,6 +581,7 @@ function handleAction(seat, m) {
 }
 
 function startGuest(c, pw, nick) {
+  stopProbe(); c = TABLE;
   role = 'guest'; code = c; password = pw;
   let token = lsGet('scopa.token.' + c); if (!token) { token = randToken(); lsSet('scopa.token.' + c, token); }
   lsSet('scopa.guest', JSON.stringify({ code: c, pw, nick }));
@@ -580,7 +594,7 @@ function startGuest(c, pw, nick) {
       peer.on('open', () => connect());
       peer.on('error', e => {
         netOk = false; render();
-        if (e.type === 'peer-unavailable') { if (!V) setErr('Nessuna partita aperta con questo codice. Controlla il codice e che chi l\'ha creata abbia il gioco aperto.'); retryT = setTimeout(connect, 4000); }
+        if (e.type === 'peer-unavailable') { if (!V) setErr('La partita non risponde: chi l\'ha creata deve avere il gioco aperto.'); retryT = setTimeout(connect, 4000); }
         else retryT = setTimeout(() => { try { peer.destroy(); } catch {} peer = null; connect(); }, 4000);
       });
       peer.on('disconnected', () => { try { peer.reconnect(); } catch {} });
@@ -601,9 +615,34 @@ function startGuest(c, pw, nick) {
 function stopGuest() { role = null; clearTimeout(retryT); try { conn?.close(); } catch {} try { peer?.destroy(); } catch {} peer = null; conn = null; lsDel('scopa.guest'); }
 function act(m) { if (role === 'host') handleAction(0, m); else if (conn && conn.open) conn.send(m); else toast('Non sei collegato: aspetta qualche secondo.'); }
 
+// ================= Finding the open game =================
+let probe = null, probeT = null, online = null, onlineKey = '';
+function stopProbe() { clearTimeout(probeT); probeT = null; try { probe?.destroy(); } catch {} probe = null; }
+function setOnline(v) { const k = JSON.stringify(v); if (k === onlineKey) return; online = v; onlineKey = k; if (!role) renderOnline(); }
+function startProbe() {
+  if (role || typeof Peer === 'undefined') return;
+  clearTimeout(probeT);
+  if (!probe || probe.destroyed) {
+    probe = new Peer();
+    probe.on('open', () => probeOnce());
+    probe.on('error', e => { if (e.type === 'peer-unavailable') setOnline(false); else { try { probe.destroy(); } catch {} probe = null; } if (!role) probeT = setTimeout(startProbe, 5000); });
+    probe.on('disconnected', () => { try { probe.reconnect(); } catch {} });
+    return;
+  }
+  if (probe.open) probeOnce();
+}
+function probeOnce() {
+  if (role || !probe?.open) return;
+  const c = probe.connect(peerId(TABLE)); let got = false;
+  const to = setTimeout(() => { if (!got) { setOnline(false); try { c.close(); } catch {} } }, 7000);
+  c.on('open', () => c.send({ t: 'peek' }));
+  c.on('data', m => { if (m?.t === 'info') { got = true; clearTimeout(to); setOnline(m.info); setTimeout(() => { try { c.close(); } catch {} }, 200); } });
+  clearTimeout(probeT); probeT = setTimeout(startProbe, 8000);
+}
+
 // ================= Players & win history =================
 // Each phone keeps the list of finished matches; phones merge their lists whenever they play together.
-const VERSION = 7;
+const VERSION = 8;
 const NAMES = ['Maurizio', 'Giancarlo', 'Ospite 1', 'Ospite 2'];
 const REGULARS = ['Maurizio', 'Giancarlo'];
 const allowedNames = n => NAMES.slice(0, Math.max(2, n));   // 2: Maurizio e Giancarlo · 3: + Ospite 1 · 4: + Ospite 2
@@ -639,7 +678,7 @@ let sel = null, pick = [], createN = 2, createGame = lsGet('scopa.game') || 'sco
 function setErr(t) { const e = $('#jerr'); if (e) e.textContent = t; else toast(t); }
 function goHome(err = '') {
   if (role === 'host') { clearTimeout(trickT); trickT = null; try { peer?.destroy(); } catch {} peer = null; }
-  role = null; V = null; S = null; homeErr = err; seenSeq = null; render();
+  role = null; V = null; S = null; homeErr = err; seenSeq = null; online = null; render();
 }
 function render() {
   app.classList.toggle('play', !!(role && V && V.status !== 'lobby'));
@@ -651,27 +690,20 @@ function render() {
 }
 
 function renderHome() {
-  const prefill = (location.hash.slice(1) || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 5);
   const saved = (() => { try { return JSON.parse(lsGet('scopa.host') || 'null'); } catch { return null; } })();
   const resume = saved && saved.S && saved.S.status !== 'over' ? saved : null;
-  if (!homeTab) homeTab = prefill ? 'join' : 'create';
   const tg = GAMES[createGame].targets;
   app.innerHTML = `
     <div class="hero">
       <div class="fan">${cardHTML('d1')}${cardHTML('c10')}${cardHTML('d7')}</div>
       <div><div class="eyebrow">Scopa e Briscola · 2–4 giocatori</div><h1 style="margin-top:6px">Carte tra Amici</h1></div>
     </div>
-    ${dashboardHTML()}
     <label for="nick">Chi sei<select id="nick">${NAMES.map(nm => `<option ${nm === myName() ? 'selected' : ''}>${nm}</option>`).join('')}</select></label>
-    ${resume ? `<div class="panel"><div class="eyebrow">Partita in sospeso</div><h3>${GAMES[resume.S.game || 'scopa'].name} · codice ${esc(resume.code)}</h3><p class="muted small">${resume.S.players.map(p => esc(p.nick)).join(', ')}</p><div class="row"><button class="grow" id="resume">Riprendi</button><button class="ghost" id="drop">Chiudila</button></div></div>` : ''}
-    <div class="seg" id="tabs"><button type="button" data-tab="create" aria-pressed="${homeTab === 'create'}">Crea partita</button><button type="button" data-tab="join" aria-pressed="${homeTab === 'join'}">Entra con codice</button></div>
-    <form id="join" class="panel" novalidate ${homeTab === 'join' ? '' : 'hidden'}>
-      <div class="row"><label class="grow" for="jcode">Codice<input id="jcode" class="code" maxlength="5" autocomplete="off" autocapitalize="characters" placeholder="ABCDE" value="${esc(prefill)}"></label>
-      <label class="grow" for="jpw">Password<input id="jpw" type="password" autocomplete="off" placeholder="Te l'hanno mandata"></label></div>
-      <p class="err" id="jerr">${esc(homeErr)}</p>
-      <button type="submit">Siediti al tavolo</button>
-    </form>
-    <form id="create" class="panel" novalidate ${homeTab === 'create' ? '' : 'hidden'}>
+    <p class="err" id="herr" style="text-align:center">${esc(homeErr)}</p>
+    ${resume ? `<div class="panel"><div class="eyebrow">La tua partita è in sospeso</div><h3>${GAMES[resume.S.game || 'scopa'].name} · ${resume.S.players.map(p => esc(p.nick)).join(', ')}</h3><div class="row"><button class="grow" id="resume">Riprendi</button><button class="ghost" id="drop">Chiudila</button></div></div>` : ''}
+    <div id="online"></div>
+    <form id="create" class="panel" novalidate hidden>
+      <div class="eyebrow">Nessuna partita online</div><h3>Apri un tavolo</h3>
       <div class="games" id="gsel">
         <button type="button" class="game-tile" data-g="scopa" aria-pressed="${createGame === 'scopa'}"><b>Scopa</b><span>Prendi per somma, fai scopa, conta primiera e settebello.</span></button>
         <button type="button" class="game-tile" data-g="briscola" aria-pressed="${createGame === 'briscola'}"><b>Briscola</b><span>Mani a prese con il seme di briscola. Vince chi fa più di 60.</span></button>
@@ -681,38 +713,56 @@ function renderHome() {
       <label for="cpw">Password del tavolo<input id="cpw" type="password" autocomplete="new-password" placeholder="Almeno 3 caratteri"></label>
       <p class="err" id="cerr"></p>
       <button type="submit">Apri il tavolo</button>
-      <p class="muted small">Tieni il gioco aperto finché giocate: la partita vive sul tuo telefono.</p>
+      <p class="muted small">Chi apre il gioco vedrà la tua partita e dovrà solo mettere la password. Tieni il gioco aperto finché giocate.</p>
     </form>
+    ${dashboardHTML()}
     <p class="muted small" style="text-align:center">Versione ${VERSION}</p>`;
   homeErr = '';
   const nickOk = () => { const n = $('#nick').value; lsSet('scopa.nick', n); return n; };
   $('#nick').onchange = e => lsSet('scopa.nick', e.target.value);
-  $('#tabs').onclick = e => { const b = e.target.closest('button'); if (!b) return; homeTab = b.dataset.tab; renderHome(); };
-  $('#gsel').onclick = e => { const b = e.target.closest('button'); if (!b) return; createGame = b.dataset.g; lsSet('scopa.game', createGame); renderHome(); };
+  $('#gsel').onclick = e => { const b = e.target.closest('button'); if (!b) return; createGame = b.dataset.g; lsSet('scopa.game', createGame); $('#gsel').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', x.dataset.g === createGame)); $('#target').innerHTML = GAMES[createGame].targets.map(([v, l], i) => `<option value="${v}" ${i === 0 ? 'selected' : ''}>${l}</option>`).join(''); };
   $('#nseg').onclick = e => { const b = e.target.closest('button'); if (!b) return; createN = +b.dataset.n; $('#nseg').querySelectorAll('button').forEach(x => x.setAttribute('aria-pressed', +x.dataset.n === createN)); };
   $('#create').onsubmit = e => {
-    e.preventDefault(); const nick = nickOk(); if (!nick) return;
+    e.preventDefault(); const nick = nickOk();
     if (!allowedNames(createN).includes(nick)) { $('#cerr').textContent = `In una partita a ${createN} giocano: ${allowedNames(createN).join(', ')}.`; return; }
     const pw = $('#cpw').value; if (pw.length < 3) { $('#cerr').textContent = 'La password deve avere almeno 3 caratteri.'; return; }
-    startHost(randCode(), pw, nick, createGame, createN, +$('#target').value);
+    startHost(TABLE, pw, nick, createGame, createN, +$('#target').value);
   };
-  $('#join').onsubmit = e => {
-    e.preventDefault(); const nick = nickOk(); if (!nick) return;
-    const c = $('#jcode').value.toUpperCase().trim(), pw = $('#jpw').value;
-    if (c.length !== 5) { $('#jerr').textContent = 'Il codice ha 5 caratteri.'; return; }
+  $('#online').onsubmit = e => {
+    e.preventDefault(); const nick = nickOk(), pw = $('#jpw').value;
     if (!pw) { $('#jerr').textContent = 'Scrivi la password.'; return; }
-    startGuest(c, pw, nick);
+    startGuest(TABLE, pw, nick);
   };
   if (resume) {
-    $('#resume').onclick = () => startHost(resume.code, resume.password, resume.S.players[0].nick, resume.S.game, 0, 0, resume.S);
+    $('#resume').onclick = () => startHost(TABLE, resume.password, resume.S.players[0].nick, resume.S.game, 0, 0, resume.S);
     $('#drop').onclick = () => { lsDel('scopa.host'); renderHome(); };
   }
-  if (prefill && homeTab === 'join') setTimeout(() => $('#jpw')?.focus(), 50);
+  onlineKey = JSON.stringify(online);
+  renderOnline();
+  startProbe();
+}
+function renderOnline() {
+  const box = $('#online'), create = $('#create'); if (!box || !create) return;
+  const pw = $('#jpw')?.value || '';
+  if (online === null) { box.innerHTML = `<div class="panel"><p class="muted" style="text-align:center">Cerco partite online…</p></div>`; create.hidden = true; return; }
+  if (!online) { box.innerHTML = ''; create.hidden = false; return; }
+  create.hidden = true;
+  const o = online, inGame = o.status !== 'lobby';
+  const who = o.players.map((nm, i) => `<span class="row" style="gap:6px">${avatar(nm, NAMES.indexOf(nm) < 0 ? i : NAMES.indexOf(nm))}${esc(nm)}</span>`).join('');
+  box.innerHTML = `<form class="panel live" novalidate>
+      <div class="row"><span class="dot"></span><div class="eyebrow grow">Partita online</div><span class="pill">${o.players.length}/${o.nPlayers}</span></div>
+      <h2>${GAMES[o.game]?.name || 'Partita'} di ${esc(o.host)}</h2>
+      <p class="muted small">${inGame ? 'In corso: puoi rientrare se ci stavi giocando.' : o.free.length ? 'Posti liberi per: ' + o.free.map(esc).join(', ') : 'Tavolo al completo.'} · ${targetLabel(o)}</p>
+      <div class="row">${who}</div>
+      <label for="jpw">Password<input id="jpw" type="password" autocomplete="off" placeholder="Te l'ha detta ${esc(o.host)}" value="${esc(pw)}"></label>
+      <p class="err" id="jerr"></p>
+      <button type="submit">${inGame ? 'Rientra' : 'Entra nella partita'}</button>
+    </form>`;
 }
 
 function renderConnecting() {
   app.innerHTML = `<div class="topbar"><button class="ghost mini" id="back">← Esci</button></div>
-    <div class="panel"><div class="eyebrow">Partita ${esc(code)}</div><h2>Mi siedo al tavolo…</h2>
+    <div class="panel"><div class="eyebrow">Tavolo</div><h2>Mi siedo al tavolo…</h2>
     <p class="muted">Chi ha creato la partita deve avere il gioco aperto sul telefono.</p><p class="err" id="jerr"></p></div>`;
   $('#back').onclick = () => { stopGuest(); goHome(); };
 }
@@ -731,9 +781,8 @@ function renderWait() {
     <div class="topbar"><button class="ghost mini" id="back">← Esci</button><span class="grow"></span>${connPill()}</div>
     <div class="panel">
       <div class="eyebrow">${GAMES[s.game].name} · ${targetLabel(s)}</div>
-      <p class="muted small" style="text-align:center">Codice partita</p>
-      <div class="bigcode">${esc(s.code)}</div>
-      ${host ? `<button class="ghost" id="copy">Copia link d'invito</button><p class="muted small" style="text-align:center">Manda il link e, a parte, la password.</p>` : ''}
+      <h2>Tavolo aperto</h2>
+      ${host ? `<button class="ghost" id="copy">Copia link d'invito</button><p class="muted small">Chi apre il link vede questa partita e mette solo la password.</p>` : ''}
       ${s.nPlayers === 4 ? '<p class="muted small">Si gioca a coppie: 1° e 3° contro 2° e 4°.</p>' : ''}
       <div class="seats">${seats}</div>
       ${host ? `<button id="start" ${full ? '' : 'disabled'}>${full ? 'Distribuisci le carte' : `Aspetto ${missing} giocator${missing === 1 ? 'e' : 'i'}`}</button>` : `<p class="status">${full ? 'Ci siete tutti: ' + esc(s.players[0].nick) + ' sta per distribuire.' : 'Aspettiamo gli altri giocatori…'}</p>`}
@@ -741,7 +790,7 @@ function renderWait() {
   bindExit();
   if (host) {
     $('#start').onclick = () => act({ t: 'start' });
-    $('#copy').onclick = async () => { const l = inviteLink(code); try { await navigator.clipboard.writeText(l); toast('Link copiato'); } catch { toast(l); } };
+    $('#copy').onclick = async () => { const l = inviteLink(); try { await navigator.clipboard.writeText(l); toast('Link copiato'); } catch { toast(l); } };
     app.querySelectorAll('[data-kick]').forEach(b => b.onclick = () => act({ t: 'kick', seat: +b.dataset.kick }));
   }
 }
@@ -897,9 +946,8 @@ function resultHTML(s) {
 (function boot() {
   if (typeof Peer === 'undefined') { app.innerHTML = '<div class="panel"><h2>Connessione assente</h2><p class="muted">Non riesco a caricare il gioco. Controlla internet e ricarica la pagina.</p></div>'; return; }
   const g = (() => { try { return JSON.parse(lsGet('scopa.guest') || 'null'); } catch { return null; } })();
-  const hashCode = location.hash.slice(1).toUpperCase();
-  if (g && g.code && (!hashCode || hashCode === g.code)) startGuest(g.code, g.pw, g.nick);   // rejoin after a reload
-  else render();
+  if (g && g.code === TABLE) startGuest(TABLE, g.pw, g.nick);   // rejoin after a reload
+  else { lsDel('scopa.guest'); render(); }
 })();
 </script>
 </body>
