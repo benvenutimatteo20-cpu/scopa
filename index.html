@@ -116,7 +116,8 @@ label{display:flex; flex-direction:column; gap:7px; font-size:.82rem; color:var(
 .felt::before{content:"Carte tra Amici"; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) rotate(-8deg); font-family:var(--display); font-weight:700; font-style:italic; font-size:clamp(28px, 8vw, 64px); white-space:nowrap; color:rgba(246,238,220,.06); pointer-events:none}
 .felt.has-deck .tablecards{bottom:calc(var(--dw)*1.6 + 18px)}
 .tablecards{position:absolute; inset:12px; display:flex; flex-wrap:wrap; gap:var(--tg, 8px); justify-content:center; align-content:center}
-.tablecards .card{--w:var(--tw, 60px)}
+.tablecards .card{--w:var(--tw, 60px); margin-right:var(--tmr, 0px)}
+.tablecards{row-gap:var(--tg, 8px); align-content:safe center; overflow-y:auto; overflow-x:hidden}
 .tablecards .card.opt{box-shadow:0 0 0 3px var(--gold), 0 8px 18px rgba(0,0,0,.4); transform:translateY(-3px)}
 .fresh{animation:drop .4s ease}
 @keyframes drop{from{transform:translateY(-26px) scale(1.08); opacity:.2}to{opacity:1}}
@@ -671,7 +672,7 @@ function probeOnce() {
 
 // ================= Players & win history =================
 // Each phone keeps the list of finished matches; phones merge their lists whenever they play together.
-const VERSION = 12;
+const VERSION = 13;
 const NAMES = ['Maurizio', 'Giancarlo', 'Ospite 1', 'Ospite 2'];
 const REGULARS = ['Maurizio', 'Giancarlo'];
 const allowedNames = n => NAMES.slice(0, Math.max(2, n));   // 2: Maurizio e Giancarlo · 3: + Ospite 1 · 4: + Ospite 2
@@ -942,17 +943,29 @@ function maybeFlash(s) {
   f.hidden = false; clearTimeout(flashT); flashT = setTimeout(() => f.hidden = true, ms);
 }
 
-// Pick the biggest table-card size that still fits every card on the felt.
+// Pick the biggest table-card size that fits every card on the felt. When the table is crowded the cards
+// overlap sideways like on a real table, always leaving the corner number visible.
 function fitTable() {
   const box = document.querySelector('.tablecards'); if (!box) return;
   const n = box.children.length; if (!n) return;
-  const W = box.clientWidth, H = box.clientHeight, g = W < 380 ? 6 : 10;
-  let best = 40;
-  for (let w = 130; w >= 40; w -= 2) {
-    const cols = Math.max(1, Math.floor((W + g) / (w + g))), rows = Math.ceil(n / cols);
-    if (rows * w * 1.6 + (rows - 1) * g <= H - 8) { best = w; break; }
-  }
-  box.style.setProperty('--tw', best + 'px'); box.style.setProperty('--tg', g + 'px');
+  box.style.paddingRight = '0px';
+  const W = box.clientWidth, H = box.clientHeight - 10, g = W < 380 ? 6 : 10;
+  const bestFor = ov => {
+    for (let w = 130; w >= 24; w -= 2) {
+      const step = ov ? w * (1 - ov) : w + g;
+      const cols = Math.max(1, Math.floor((W - w * (ov || 0)) / step + (ov ? 0 : g / step)));
+      const rows = Math.ceil(n / cols);
+      if (rows * w * 1.6 + (rows - 1) * g <= H) return w;
+    }
+    return 24;
+  };
+  const w0 = bestFor(0), w3 = bestFor(.3), w5 = bestFor(.48);
+  let w = w0, ov = 0;
+  if (w0 < 56) { if (w3 / 1.12 > w) { w = w3; ov = .3; } if (w5 / 1.25 > w / (ov ? 1.12 : 1)) { w = w5; ov = .48; } }
+  box.style.setProperty('--tw', w + 'px'); box.style.setProperty('--tg', g + 'px');
+  box.style.setProperty('--tmr', ov ? (-w * ov) + 'px' : '0px');
+  box.style.columnGap = ov ? '0px' : g + 'px';
+  box.style.paddingRight = ov ? (w * ov) + 'px' : '0px';
 }
 addEventListener('resize', () => fitTable());
 function fanStyle(i, k) { const c = i - (k - 1) / 2; return `--r:${c * 7}deg; --y:${Math.abs(c) * 7}px`; }
