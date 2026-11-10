@@ -29,7 +29,7 @@ body{background:radial-gradient(130% 90% at 50% 0%, #143a2f 0%, var(--room) 55%,
 #app{max-width:560px; margin:0 auto; min-height:100%; display:flex; flex-direction:column; gap:16px; padding-left:max(16px, env(safe-area-inset-left,0px)); padding-right:max(16px, env(safe-area-inset-right,0px)); padding-block:16px 22px}
 .card .rk,.chip b,.dash td,.bigcode,table{font-variant-numeric:lining-nums tabular-nums}
 .card .rk,.chip b,.dash td:not(:first-child){font-family:var(--body)!important; font-weight:800}
-.card .rk{font-size:calc(var(--w)*.19)!important; letter-spacing:-.03em}
+.card .rk{font-size:calc(var(--w)*.15)!important; letter-spacing:-.03em; top:calc(var(--w)*.06)!important; left:calc(var(--w)*.075)!important; background:rgba(255,253,249,.85); padding:0 1px; border-radius:2px}
 h1,h2,h3{font-variant-numeric:lining-nums; font-family:var(--display); font-weight:700; margin:0; text-wrap:balance; letter-spacing:.01em}
 h1{font-size:2.7rem; line-height:.95}
 h2{font-size:1.7rem; line-height:1.05}
@@ -424,28 +424,95 @@ function figureSVG(r, s) {
     <circle cx="39.2" cy="24.8" r="1.1" fill="${Y}" ${K}/><circle cx="47.4" cy="21.6" r="1.1" fill="${Y}" ${K}/><circle cx="52.6" cy="21.6" r="1.1" fill="${Y}" ${K}/><circle cx="60.8" cy="24.8" r="1.1" fill="${Y}" ${K}/>
     ${pip(s, 72, 101, long ? 48 : 31, long ? 15 : 0)}`;
 }
+// ---- Piacentine layouts. Round suits: [x, y, size]; long suits: [x, y, length, rotation].
+const L = (s, list) => list.map(([x, y, z, rot]) => pip(s, x, y, z, rot || 0)).join('');
+const ROUND = {
+  2: [[50, 44, 46], [50, 116, 46]],
+  3: [[32, 38, 36], [68, 80, 36], [32, 122, 36]],
+  4: [[28, 36, 32], [72, 36, 32], [28, 124, 32], [72, 124, 32]],
+  5: [[27, 34, 30], [73, 34, 30], [50, 80, 48], [27, 126, 30], [73, 126, 30]],
+  6: [[30, 36, 30], [70, 36, 30], [30, 80, 30], [70, 80, 30], [30, 124, 30], [70, 124, 30]],
+  7: [[50, 31, 28], [30, 63, 28], [70, 63, 28], [30, 97, 28], [70, 97, 28], [30, 130, 28], [70, 130, 28]]
+};
+const CLUBS = {
+  2: [[35, 80, 112, -4], [65, 80, 112, 4]],
+  3: [[50, 80, 112, -24], [50, 80, 112, 24], [50, 80, 112, 0]],
+  4: [[37, 45, 62, -14], [63, 45, 62, 14], [37, 115, 62, 194], [63, 115, 62, 166]],
+  5: [[37, 44, 58, -14], [63, 44, 58, 14], [50, 80, 46, 90], [37, 116, 58, 194], [63, 116, 58, 166]],
+  6: [[27, 45, 58, -12], [50, 43, 58, 0], [73, 45, 58, 12], [27, 115, 58, 192], [50, 117, 58, 180], [73, 115, 58, 168]],
+  7: [[27, 43, 52, -12], [50, 41, 52, 0], [73, 43, 52, 12], [50, 80, 44, 90], [27, 117, 52, 192], [50, 119, 52, 180], [73, 117, 52, 168]]
+};
+const SWORDS = {
+  2: [[38, 80, 136, 0], [62, 80, 136, 180]],
+  3: [[26, 80, 134, 0], [50, 80, 134, 180], [74, 80, 134, 0]],
+  4: [[50, 44, 76, 32], [50, 44, 76, -32], [50, 116, 76, 148], [50, 116, 76, -148]],
+  5: [[22, 40, 52, 0], [78, 40, 52, 0], [50, 80, 136, 0], [22, 120, 52, 180], [78, 120, 52, 180]],
+  6: [[38, 80, 132, 0], [62, 80, 132, 180], [18, 42, 48, 0], [82, 42, 48, 0], [18, 118, 48, 180], [82, 118, 48, 180]],
+  7: [[38, 80, 132, 0], [62, 80, 132, 180], [18, 42, 48, 0], [82, 42, 48, 0], [50, 80, 40, 90], [18, 118, 48, 180], [82, 118, 48, 180]]
+};
+const KK = 'stroke="#1a1714" stroke-linejoin="round"';
+const leaf = (x, y, rot, c = G) => `<ellipse cx="${x}" cy="${y}" rx="3.4" ry="1.5" transform="rotate(${rot} ${x} ${y})" fill="${c}" ${KK} stroke-width=".5"/>`;
+const ribbon = (y, w = 30) => `<path d="M${50 - w} ${y - 3}q${w / 2} 7 ${w} 0q${w / 2} -7 ${w} 0v6q${-w / 2} 7 ${-w} 0q${-w / 2} -7 ${-w} 0z" fill="${R}" ${KK} stroke-width=".7"/><path d="M${50 - w} ${y}q${w / 2} 7 ${w} 0q${w / 2} -7 ${w} 0" stroke="${Y}" stroke-width="1.2" fill="none"/>`;
+const bow = (x, y) => `<g transform="translate(${x} ${y})">
+    <path d="M0 0q-12-10-15-2q-2 7 15 2zM0 0q12-10 15-2q2 7-15 2z" fill="${R}" ${KK} stroke-width=".7"/>
+    <path d="M0 0l-8 13l4-1l1 4zM0 0l8 13l-4-1l-1 4z" fill="${BL}" ${KK} stroke-width=".7"/>
+    <circle r="5" fill="#fbf8f2" ${KK} stroke-width=".7"/><circle r="2" fill="${R}"/>
+    ${[0, 60, 120, 180, 240, 300].map(a => `<circle cx="${(3.5 * Math.cos(a * Math.PI / 180)).toFixed(2)}" cy="${(3.5 * Math.sin(a * Math.PI / 180)).toFixed(2)}" r=".7" fill="${BL}"/>`).join('')}</g>`;
+const crest = (x, y) => `<g transform="translate(${x} ${y})">
+    <path d="M-17 10q-7-12 3-24M17 10q7-12-3-24" stroke="${G}" stroke-width="1.6" fill="none"/>
+    ${leaf(-19, 2, -70)}${leaf(-17, -6, -50)}${leaf(-13, -12, -30)}${leaf(19, 2, 70)}${leaf(17, -6, 50)}${leaf(13, -12, 30)}
+    <path d="M-9-8h18v10q0 9-9 12q-9-3-9-12z" fill="#fbf8f2" ${KK} stroke-width=".8"/><path d="M0-8v22M-9 1h18" stroke="#1a1714" stroke-width=".5"/>
+    <circle cx="-4.5" cy="-3.5" r="1.4" fill="${R}"/><circle cx="4.5" cy="-3.5" r="1.4" fill="${BL}"/><circle cx="-4" cy="6" r="1.4" fill="${G}"/><circle cx="4" cy="6" r="1.4" fill="${Y}" ${KK} stroke-width=".3"/>
+    <path d="M-9-10l-1.2-8 4.4 3.4 2.8-5.4 3 5.4 3-5.4 2.8 5.4 4.4-3.4-1.2 8z" fill="${Y}" ${KK} stroke-width=".7"/><path d="M-9-10h18" stroke="#1a1714" stroke-width=".7"/></g>`;
+function aceSVG(s) {
+  if (s === 'd') {   // coronated eagle holding the coin
+    const wing = `<path d="M50 72C38 60 26 46 13 24c6 7 10 7 12 3c2 9 6 11 8 7c0 11 6 15 8 13c-2 11 4 16 9 25z" fill="#8a4a1e" ${KK} stroke-width=".9"/>
+      <path d="M20 32l9 12M27 34l7 12M33 42l6 10M37 52l7 9" stroke="#4d2709" stroke-width=".7"/>`;
+    return `${wing}<g transform="translate(100 0) scale(-1 1)">${wing}</g>
+      <path d="M41 102q9 26 18 0z" fill="#8a4a1e" ${KK} stroke-width=".8"/><path d="M44 126l6 14 6-14z" fill="#8a4a1e" ${KK} stroke-width=".8"/>
+      <path d="M40 112l-5 7M60 112l5 7" stroke="${Y}" stroke-width="2.4" stroke-linecap="round"/>
+      <path d="M44 42q6-12 12 0q2 6-1 10h-10q-3-4-1-10z" fill="#8a4a1e" ${KK} stroke-width=".8"/>
+      <path d="M53.5 46l6 2.4-6 1.6z" fill="${Y}" ${KK} stroke-width=".6"/><circle cx="51.4" cy="45.2" r=".9" fill="#1a1714"/>
+      <path d="M44 36l-1-8 3.4 3 2.2-5 1.4 5 1.4-5 2.2 5 3.4-3-1 8z" fill="${Y}" ${KK} stroke-width=".7"/>
+      ${pip('d', 50, 84, 54)}
+      <rect x="16" y="140" width="68" height="6" rx="2" fill="${G}" ${KK} stroke-width=".7"/><path d="M18 143h64" stroke="${Y}" stroke-width="1.2" stroke-dasharray="3 2"/>`;
+  }
+  if (s === 'c') return `<path d="M30 132h40l6 10H24z" fill="${R}" ${KK} stroke-width=".9"/><path d="M26 140h48" stroke="${Y}" stroke-width="2.4"/>
+      <circle cx="30" cy="144" r="2.4" fill="${Y}" ${KK} stroke-width=".6"/><circle cx="70" cy="144" r="2.4" fill="${Y}" ${KK} stroke-width=".6"/>
+      ${pip('c', 50, 82, 92)}`;
+  if (s === 'b') return `<ellipse cx="50" cy="140" rx="30" ry="5" fill="#7a8f3a" ${KK} stroke-width=".8"/><path d="M26 138q3-5 6 0M66 139q3-5 6 0" stroke="${G}" stroke-width="1.4" fill="none"/>
+      ${pip('b', 36, 62, 40, -55)}${pip('b', 66, 96, 34, 58)}${pip('b', 50, 78, 120, 6)}
+      ${leaf(26, 50, -30)}${leaf(22, 58, 20)}${leaf(73, 88, 30)}${leaf(77, 96, -20)}${leaf(44, 30, -60)}<circle cx="47" cy="124" r="2.6" fill="${R}" ${KK} stroke-width=".6"/>`;
+  // sword wrapped in a green garland with red berries
+  let g = '', d = '';
+  for (let i = 0; i <= 40; i++) { const y = 26 + i * 2.6, x = 50 + Math.sin(i * .55) * 13; d += (i ? 'L' : 'M') + x.toFixed(1) + ' ' + y.toFixed(1); if (i % 2) g += leaf(x, y, i * 23); if (i % 7 === 3) g += `<circle cx="${x.toFixed(1)}" cy="${(y + 2).toFixed(1)}" r="1.6" fill="${R}" ${KK} stroke-width=".4"/>`; }
+  return `${pip('s', 50, 80, 134)}<path d="${d}" stroke="#2c5a22" stroke-width="1.6" fill="none"/>${g}
+      <path d="M30 34q20-12 40 0l-3 6q-17-9-34 0z" fill="${BL}" ${KK} stroke-width=".7"/>`;
+}
+// Double-headed court cards: the upper half figure, then the same turned upside down, split by a line.
+const HELD = { 8: { r: [24, 30, 22], l: [24, 44, 64, -18] }, 9: { r: [22, 26, 20], l: [22, 40, 58, -20] }, 10: { r: [77, 32, 22], l: [77, 44, 66, 16] } };
+function doubleFigure(r, s) {
+  let fig = figureSVG(r, s);
+  const k = fig.lastIndexOf('<use href="#pip-'); if (k >= 0) fig = fig.slice(0, k) + fig.slice(fig.indexOf('/>', k) + 2);
+  const long = s === 's' || s === 'b', hp = HELD[r][long ? 'l' : 'r'];
+  const half = `<g clip-path="url(#halfclip)"><g transform="translate(-5 -21.7) scale(1.1)">${fig}</g>${pip(s, hp[0], hp[1], hp[2], hp[3] || 0)}</g>`;
+  return `${half}<g transform="rotate(180 50 80)">${half}</g><path d="M7 80h86" stroke="#1a1714" stroke-width=".9"/>`;
+}
 function faceSVG(id) {
   const r = rank(id), s = suit(id);
   let body;
-  if (FIG[r]) body = figureSVG(r, s);
-  else if (r === 1 && (s === 'd' || s === 'c')) body = pip(s, 50, 80, 82);
-  else if (r === 1 && s === 'b') body = pip('b', 50, 80, 128, 14);
-  else if (r === 1 && s === 's') body = pip('s', 50, 80, 132);
-  else if (r === 1) body = `<circle cx="50" cy="80" r="38" fill="none" stroke="${SC[s]}" stroke-width="1" opacity=".35"/><circle cx="50" cy="80" r="34" fill="none" stroke="${SC[s]}" stroke-width=".6" opacity=".35"/>
-      <path d="M22 108q-6-12 2-22M78 108q6-12-2-22M22 52q-6 12 2 22M78 52q6 12-2 22" stroke="${G}" stroke-width="2" fill="none" opacity=".75"/>
-      ${LONG[s] ? pip(s, 50, 80, 112, s === 'b' ? 12 : 0) : pip(s, 50, 80, s === 'd' ? 0 : 58)}`;
-  else if (LONG[s]) {
-    const len = r <= 3 ? (s === 'b' ? 88 : 96) : 60;
-    body = LONGLAYOUT[r].map(([x, y], i) => pip(s, x, y, len, s === 'b' ? (i % 2 ? 14 : -14) : 0)).join('');
-  }
-  else body = LAYOUT[r].map(([x, y]) => pip(s, x, y, s === 'd' || s === 'c' ? (r >= 6 ? 27 : 30) : (r >= 6 ? 24 : 27))).join('');
+  if (FIG[r]) body = doubleFigure(r, s);
+  else if (r === 1) body = aceSVG(s);
+  else if (s === 'b') body = L('b', CLUBS[r]) + (r === 3 ? ribbon(86, 14) : '');
+  else if (s === 's') body = L('s', SWORDS[r]) + (r === 2 ? `<path d="M30 84q20-14 40 0v6q-20-14-40 0z" fill="${R}" ${KK} stroke-width=".7"/><path d="M30 87q20-14 40 0" stroke="${Y}" stroke-width="1.2" fill="none"/>` : '');
+  else body = L(s, ROUND[r]) + (r === 4 ? (s === 'd' ? crest(50, 82) : bow(50, 80)) : '');
   return `<svg class="face" viewBox="0 0 100 160" aria-hidden="true">${body}</svg>`;
 }
-const cardInner = id => `${faceSVG(id)}<span class="rk">${rank(id)}</span><span class="rk b">${rank(id)}</span>`;
+const cardInner = id => `${faceSVG(id)}<span class="rk">${rank(id)}</span>`;
 const cardHTML = (id, cls = '') => `<div class="card s-${suit(id)} ${cls}" role="img" aria-label="${cardName(id)}">${cardInner(id)}</div>`;
 const backHTML = (cls = '') => `<div class="card back ${cls}" aria-hidden="true"></div>`;
 const suitIcon = s => `<svg viewBox="${PIPS[s][0]}" aria-hidden="true"><use href="#pip-${s}"/></svg>`;
-document.body.insertAdjacentHTML('afterbegin', `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>${Object.entries(PIPS).map(([k, v]) => `<symbol id="pip-${k}" viewBox="${v[0]}">${v[1]}</symbol>`).join('')}</defs></svg>`);
+document.body.insertAdjacentHTML('afterbegin', `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs><clipPath id="halfclip" clipPathUnits="userSpaceOnUse"><rect x="0" y="0" width="100" height="80"/></clipPath>${Object.entries(PIPS).map(([k, v]) => `<symbol id="pip-${k}" viewBox="${v[0]}">${v[1]}</symbol>`).join('')}</defs></svg>`);
 
 // ================= Shared rules =================
 const GAMES = {
@@ -804,13 +871,13 @@ function probeOnce() {
 
 // ================= Players & win history =================
 // Each phone keeps the list of finished matches; phones merge their lists whenever they play together.
-const VERSION = 20;
+const VERSION = 22;
 const NAMES = ['Maurizio', 'Giancarlo', 'Ospite 1', 'Ospite 2'];
 const REGULARS = ['Maurizio', 'Giancarlo'];
 const allowedNames = n => NAMES.slice(0, Math.max(2, n));   // 2: Maurizio e Giancarlo · 3: + Ospite 1 · 4: + Ospite 2
 const myName = () => NAMES.includes(lsGet('scopa.nick')) ? lsGet('scopa.nick') : NAMES[0];
 // Raising HIST_EPOCH resets the win counter on every phone: older matches are ignored even if another phone sends them.
-const HIST_EPOCH = 1;   // 1 = azzerato il 10/11/2026
+const HIST_EPOCH = 2;   // 1 = azzerato il 10/11/2026 · 2 = azzerato di nuovo il 10/11/2026
 function loadHist() { try { const h = JSON.parse(lsGet('scopa.hist') || '[]'); return Array.isArray(h) ? h.filter(m => m && m.ep === HIST_EPOCH) : []; } catch { return []; } }
 function mergeHist(extra) {
   if (!Array.isArray(extra) || !extra.length) return false;
@@ -990,7 +1057,14 @@ const SFOTTO = [
   'Arivato er Re de\' scope… e de\' culi!', 'Ma \'na partita normale mai, eh?', 'A forza de culo te fanno santo, {nome}!',
   'Gioca pulito, {nome}, che nun semo ar mercato!', 'Ce stai a prende gusto, eh?', 'Scopa? Tutto culo e gnente testa!',
   'Pure \'sta vorta? Ma \'ndo l\'hai imparato, a Regina Coeli?', 'Ma rubbi pure ar supermercato, {nome}?',
-  'Tanto \'a primiera è mia, goditela finché dura!'
+  'Tanto \'a primiera è mia, goditela finché dura!',
+  'Ammazza oh, mo\' te credi Maradona?', 'Questa nun era scopa, era \'na rapina a mano armata!',
+  'Ma che, c\'hai er telefono collegato ar Padreterno?', 'Scopa? Sì, quella de casa tua, {nome}: va\' a scopà là!',
+  'Ma sei sicuro che nun hai sbirciato er mazzo?', 'Te devono mette \'n monumento ar Gianicolo, a te e ar culo tuo!',
+  'Daje, fatte \'n giro de campo che te lo sei meritato… forse.', 'Ogni vorta \'na scopa, ma che te sei magnato, er ferro de cavallo?',
+  'Hai vinto \'na scopa, mica \'a lotteria de Capodanno!', 'Ma gioca \'na carta normale ogni tanto, {nome}!',
+  'Mo\' basta, \'sta partita la denuncio ar Tar der Lazio!', 'C\'hai \'n culo che s\'allarga ogni mano, {nome}!',
+  'Va bene, va bene, sei bravo… ar Bingo!', 'Scopa e via, come er tram de\' Castelli!'
 ];
 const VANTO = [
   'Tiè! Scopa e zitto!', 'Mo\' piagni, eh?', 'Imparate, regazzì!', 'Questa è classe, artro che culo!',
@@ -1096,8 +1170,8 @@ function fitTable() {
   const w0 = bestFor(0), w3 = bestFor(.3), w5 = bestFor(.48);
   // overlapping is a last resort: it must win clearly over a tidy, non-overlapping layout
   let w = w0, ov = 0, score = w0;
-  if (w3 / 1.2 > score) { w = w3; ov = .3; score = w3 / 1.2; }
-  if (w5 / 1.6 > score) { w = w5; ov = .48; }
+  if (w3 / 1.4 > score) { w = w3; ov = .3; score = w3 / 1.4; }
+  if (w5 / 1.9 > score) { w = w5; ov = .48; }
   box.style.setProperty('--tw', w + 'px'); box.style.setProperty('--tg', g + 'px');
   box.style.setProperty('--tmr', ov ? (-w * ov) + 'px' : '0px');
   box.style.columnGap = ov ? '0px' : g + 'px';
