@@ -152,6 +152,7 @@ label{display:flex; flex-direction:column; gap:7px; font-size:.82rem; color:var(
 .flash .arrow{font-size:1.4rem; color:var(--gold); padding:0 4px}
 .flash .ttl{font-family:var(--display); font-size:1.5rem; color:var(--gold)}
 .flash .ttl.big{font-size:2.4rem}
+.flash .quip{font-size:1.1rem; font-weight:800; text-align:center; color:var(--ink); max-width:18em; text-wrap:balance}
 @keyframes flash{0%{opacity:0; transform:scale(.92)}12%{opacity:1; transform:none}80%{opacity:1}100%{opacity:0; transform:translateY(-8px)}}
 
 .overlay{position:fixed; inset:0; background:rgba(4,12,10,.82); backdrop-filter:blur(3px); display:flex; align-items:center; justify-content:center; padding:max(16px, env(safe-area-inset-top,0px)) max(16px, env(safe-area-inset-right,0px)) max(16px, env(safe-area-inset-bottom,0px)) max(16px, env(safe-area-inset-left,0px)); z-index:20; overflow:auto}
@@ -694,6 +695,25 @@ function bindExit() {
 }
 
 // Briefly show what an opponent captured (scopa), as you'd see it at a real table, then it's gone.
+// Battute in romanaccio: SFOTTO quando la scopa la fa l'avversario, VANTO quando la fai tu (o il tuo compagno).
+const SFOTTO = [
+  'Che bucio de culo!', 'Ma che culo rotto c\'hai?!', 'Ammazza che culo, li mortacci tua!',
+  'Aò, ma \'sto culo chi te l\'ha regalato?', 'C\'hai er culo foderato de ferri de cavallo!',
+  'Li mortacci, n\'antra scopa!', 'Ma vaffanculo va\', {nome}!', 'Te possino… che culo sfacciato!',
+  'Manco se pregavi la Madonna der Divino Amore!', 'Sei \'n miracolato, aò!',
+  'C\'hai \'n culo che pare er portone de San Pietro!', 'Ma che stai a fà, me rubi?!',
+  'Mannaggia a te e a chi t\'ha imparato a giocà!', 'Mo\' basta, {nome}, me stai a rompe er cazzo!',
+  'Daje de culo, daje… tanto prima o poi finisce!', 'Ma \'ndo l\'hai trovato \'sto culo, ar mercato de Porta Portese?',
+  'Er culo tuo dovrebbero mettelo ar Colosseo!', 'Li mortacci tua e de tu\' nonno a cavallo!'
+];
+const VANTO = [
+  'Tiè! Scopa e zitto!', 'Mo\' piagni, eh?', 'Imparate, regazzì!', 'Questa è classe, artro che culo!',
+  'Scopa! Stasera paghi tu, \'a cena.', 'Beccate \'sta scopa e porta a casa!', 'Daje! Nun ce n\'è pe\' nessuno!',
+  'E vai cor tango!', 'Scopa! Pulito come \'n fischio!', 'Ammazza quanto so\' forte, li mortacci!'
+];
+let lastLine = '';
+function pickLine(list) { let l; do { l = list[Math.floor(Math.random() * list.length)]; } while (l === lastLine && list.length > 1); return lastLine = l; }
+
 function maybeFlash(s) {
   const h = s.hand; if (!h) return;
   if (seenSeq === null || h.seq < seenSeq) { seenSeq = h.seq; return; }
@@ -704,11 +724,15 @@ function maybeFlash(s) {
   if (m.seat === mySeat && !m.scopa) return;
   if (!m.take.length) return;
   const who = esc(s.players[m.seat].nick);
+  const ours = teamOf(s, m.seat) === teamOf(s, mySeat);
+  const line = m.scopa ? pickLine(ours ? VANTO : SFOTTO) : '';
+  const ms = m.scopa ? 3200 : 1900;
   const f = $('#flash');
-  f.innerHTML = `<div class="box">${m.scopa ? `<div class="ttl big">Scopa!</div>` : `<div class="ttl">${who} prende</div>`}
+  f.innerHTML = `<div class="box" style="animation-duration:${ms}ms">${m.scopa ? `<div class="ttl big">Scopa!</div>` : `<div class="ttl">${who} prende</div>`}
+    ${m.scopa ? `<div class="quip">${esc(line.replace('{nome}', s.players[m.seat].nick))}</div>` : ''}
     ${m.seat !== mySeat ? `<div class="cards">${cardHTML(m.card)}<span class="arrow">→</span>${m.take.map(c => cardHTML(c)).join('')}</div>` : ''}
     ${m.scopa && m.seat !== mySeat ? `<div class="muted small">${who}</div>` : ''}</div>`;
-  f.hidden = false; clearTimeout(flashT); flashT = setTimeout(() => f.hidden = true, 1900);
+  f.hidden = false; clearTimeout(flashT); flashT = setTimeout(() => f.hidden = true, ms);
 }
 
 function fanStyle(i, k) { const c = i - (k - 1) / 2; return `--r:${c * 7}deg; --y:${Math.abs(c) * 7}px`; }
