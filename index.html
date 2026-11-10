@@ -603,7 +603,7 @@ function act(m) { if (role === 'host') handleAction(0, m); else if (conn && conn
 
 // ================= Players & win history =================
 // Each phone keeps the list of finished matches; phones merge their lists whenever they play together.
-const VERSION = 6;
+const VERSION = 7;
 const NAMES = ['Maurizio', 'Giancarlo', 'Ospite 1', 'Ospite 2'];
 const REGULARS = ['Maurizio', 'Giancarlo'];
 const allowedNames = n => NAMES.slice(0, Math.max(2, n));   // 2: Maurizio e Giancarlo · 3: + Ospite 1 · 4: + Ospite 2
@@ -784,12 +784,11 @@ function maybeFlash(s) {
   if (m.seat === mySeat && !m.scopa) return;
   if (!m.take.length) return;
   const who = esc(s.players[m.seat].nick);
-  const ours = teamOf(s, m.seat) === teamOf(s, mySeat);
-  const line = m.scopa ? pickLine(ours ? VANTO : SFOTTO) : '';
+  const line = m.scopa && m.seat === mySeat ? pickLine(SFOTTO) : '';   // the joke goes only to whoever made the scopa
   const ms = m.scopa ? 3200 : 1900;
   const f = $('#flash');
   f.innerHTML = `<div class="box" style="animation-duration:${ms}ms">${m.scopa ? `<div class="ttl big">Scopa!</div>` : `<div class="ttl">${who} prende</div>`}
-    ${m.scopa ? `<div class="quip">${esc(line.replace('{nome}', s.players[m.seat].nick))}</div>` : ''}
+    ${line ? `<div class="quip">${esc(line.replace('{nome}', s.players[m.seat].nick))}</div>` : ''}
     ${m.seat !== mySeat ? `<div class="cards">${cardHTML(m.card)}<span class="arrow">→</span>${m.take.map(c => cardHTML(c)).join('')}</div>` : ''}
     ${m.scopa && m.seat !== mySeat ? `<div class="muted small">${who}</div>` : ''}</div>`;
   f.hidden = false; clearTimeout(flashT); flashT = setTimeout(() => f.hidden = true, ms);
