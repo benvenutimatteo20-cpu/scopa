@@ -24,6 +24,7 @@
 }
 *{box-sizing:border-box}
 html,body{height:100%; margin:0}
+html{-webkit-text-size-adjust:100%; text-size-adjust:100%}
 body{background:radial-gradient(130% 90% at 50% 0%, #143a2f 0%, var(--room) 55%, var(--room-2) 100%) fixed, var(--room-2); color:var(--ink); font-family:var(--body); font-size:15px; -webkit-tap-highlight-color:transparent; padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px); overscroll-behavior:none}
 #app{max-width:560px; margin:0 auto; min-height:100%; display:flex; flex-direction:column; gap:16px; padding-left:max(16px, env(safe-area-inset-left,0px)); padding-right:max(16px, env(safe-area-inset-right,0px)); padding-block:16px 22px}
 .card .rk,.chip b,.dash td,.bigcode,table{font-variant-numeric:lining-nums tabular-nums}
@@ -88,16 +89,26 @@ label{display:flex; flex-direction:column; gap:7px; font-size:.82rem; color:var(
 .back::before{opacity:.8}
 
 /* Game screen */
-#app.play{max-width:1000px; height:100dvh; min-height:0; max-height:100dvh; display:grid; grid-template-rows:auto auto minmax(0,1fr) auto auto auto; gap:clamp(6px, 1.2dvh, 12px); overflow:hidden; padding-block:clamp(6px, 1.2dvh, 12px)}
-#app.play{--hw:min(28vw, 17.5dvh, 150px); --sw:min(24vw, 14dvh, 130px); --dw:min(10vw, 7dvh, 56px)}
-@supports not (height:1dvh){ #app.play{height:100vh; max-height:100vh; --hw:min(28vw, 17.5vh, 150px); --sw:min(24vw, 14vh, 130px); --dw:min(10vw, 7vh, 56px)} }
-.topbar{display:flex; align-items:center; gap:8px}
+/* Game screen height = the real visible height (JS keeps --vvh in sync, including in-app browsers) minus the notch and home bar */
+#app.play{--H:calc(var(--vvh, 100vh) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  max-width:1000px; height:var(--H); min-height:0; max-height:var(--H); display:grid; grid-template-rows:auto auto minmax(0,1fr) auto auto auto;
+  gap:clamp(5px, calc(var(--H)*.012), 12px); overflow:hidden; padding-block:clamp(5px, calc(var(--H)*.012), 12px);
+  --hw:min(28vw, calc(var(--H)*.155), 150px); --sw:min(24vw, calc(var(--H)*.14), 130px); --dw:min(10vw, calc(var(--H)*.07), 56px); --ow:min(8vw, calc(var(--H)*.042), 40px)}
+.topbar{display:flex; align-items:center; gap:6px; min-width:0}
+.pill .cdot{display:inline-block; width:8px; height:8px; border-radius:50%; background:currentColor; margin-right:6px; vertical-align:1px}
+@media (max-width:480px){ #app.play .ctext{display:none} #app.play .pill .cdot{margin:0} #app.play .topbar .pill{padding:6px} #app.play #back{padding-inline:0; width:38px; font-size:0} #app.play #back::before{content:'←'; font-size:1.1rem} #app.play #back[data-armed='1']{width:auto; padding-inline:10px; font-size:.82rem} #app.play #back[data-armed='1']::before{content:none} .chip span{max-width:7.5em; font-size:.74rem} .chip{padding:4px 8px; gap:5px} .chip b{font-size:1.1rem} }
 .scores{display:flex; gap:6px; flex:1; justify-content:center; min-width:0}
 .chip{display:flex; align-items:center; gap:7px; padding:5px 10px; border-radius:99px; background:rgba(0,0,0,.3); border:1px solid var(--line); min-width:0}
 .chip.mine{border-color:var(--gold)}
 .chip span{font-size:.78rem; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:6.5em}
 .chip b{font-family:var(--display); font-size:1.25rem; line-height:1; font-variant-numeric:tabular-nums}
-.opps{display:flex; gap:10px; justify-content:center; flex-wrap:wrap}
+.opps{display:flex; gap:10px; justify-content:center; flex-wrap:wrap; position:relative}
+.sidedeck{position:absolute; left:0; top:50%; transform:translateY(-50%); width:calc(var(--ow) + 6px); height:calc(var(--ow)*1.6 + 4px)}
+.sidedeck .card{--w:var(--ow); position:absolute; box-shadow:0 2px 4px rgba(0,0,0,.45)}
+.sidedeck .card:nth-child(1){left:0; top:4px} .sidedeck .card:nth-child(2){left:2px; top:2px} .sidedeck .card:nth-child(3){left:4px; top:0}
+#mute{position:relative}
+.netdot{position:absolute; right:1px; top:1px; width:9px; height:9px; border-radius:50%; border:2px solid var(--room)}
+.netdot.ok{background:#5fd38a} .netdot.bad{background:var(--danger); animation:pulse 1s infinite}
 .opp{display:flex; align-items:center; gap:9px; padding:6px 14px 6px 6px; border-radius:18px; background:rgba(0,0,0,.25); border:1px solid var(--line); min-width:0}
 .opp.away{opacity:.5}
 .avatar{width:34px; height:34px; border-radius:50%; display:grid; place-items:center; font-family:var(--display); font-weight:700; font-size:1.15rem; color:#1a140a; background:var(--av, var(--gold)); flex:none; position:relative}
@@ -105,8 +116,8 @@ label{display:flex; flex-direction:column; gap:7px; font-size:.82rem; color:var(
 @keyframes pulse{0%,100%{opacity:1; transform:scale(1)}50%{opacity:.35; transform:scale(1.08)}}
 .opp .nm{font-weight:800; font-size:.88rem; max-width:7.5em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
 .opp .sub{font-size:.7rem; color:var(--muted)}
-.backs{display:flex; padding:4px 0 0 10px; height:calc(min(9vw, 5dvh, 44px)*1.6 + 6px); align-items:flex-start}
-.backs .card{--w:min(9vw, 5dvh, 44px); margin-left:calc(min(9vw, 5dvh, 44px)*-.45); box-shadow:0 2px 5px rgba(0,0,0,.45); transform-origin:50% 120%}
+.backs{display:flex; padding:4px 0 0 10px; height:calc(var(--ow, 40px)*1.6 + 6px); align-items:flex-start}
+.backs .card{--w:var(--ow, 40px); margin-left:calc(var(--ow, 40px)*-.45); box-shadow:0 2px 5px rgba(0,0,0,.45); transform-origin:50% 120%}
 .backs .card:first-child{margin-left:0}
 .backs .card:nth-child(1):not(:only-child){transform:rotate(-14deg)} .backs .card:nth-child(3){transform:rotate(14deg)}
 .backs .card:nth-child(2):last-child{transform:rotate(8deg)}
@@ -114,7 +125,6 @@ label{display:flex; flex-direction:column; gap:7px; font-size:.82rem; color:var(
 .rim{border-radius:30px; padding:clamp(6px, 1.4vw, 11px); background:repeating-linear-gradient(97deg, rgba(0,0,0,.09) 0 2px, transparent 2px 7px, rgba(255,255,255,.04) 7px 8px, transparent 8px 13px), linear-gradient(145deg, var(--wood-3), var(--wood-1) 30%, var(--wood-2) 70%, var(--wood-1)); box-shadow:0 18px 40px rgba(0,0,0,.45), 0 1px 0 rgba(255,255,255,.15) inset; min-height:0; display:flex}
 .felt{flex:1; position:relative; border-radius:22px; overflow:hidden; background:var(--noise), radial-gradient(120% 90% at 50% 40%, var(--felt) 0%, var(--felt-deep) 85%); box-shadow:0 0 0 1px rgba(0,0,0,.45) inset, 0 0 0 3px rgba(230,180,80,.18) inset, 0 6px 26px rgba(0,0,0,.5) inset; min-height:150px}
 .felt::before{content:"Carte tra Amici"; position:absolute; left:50%; top:50%; transform:translate(-50%,-50%) rotate(-8deg); font-family:var(--display); font-weight:700; font-style:italic; font-size:clamp(28px, 8vw, 64px); white-space:nowrap; color:rgba(246,238,220,.06); pointer-events:none}
-.felt.has-deck .tablecards{bottom:calc(var(--dw)*1.6 + 18px)}
 .tablecards{position:absolute; inset:12px; display:flex; flex-wrap:wrap; gap:var(--tg, 8px); justify-content:center; align-content:center}
 .tablecards .card{--w:var(--tw, 60px); margin-right:var(--tmr, 0px)}
 .tablecards{row-gap:var(--tg, 8px); align-content:safe center; overflow-y:auto; overflow-x:hidden}
@@ -146,7 +156,7 @@ label{display:flex; flex-direction:column; gap:7px; font-size:.82rem; color:var(
 .actions{display:flex; flex-direction:column; gap:6px; max-height:30vh; overflow:auto}
 .actions:empty{display:none}
 .actions button{width:100%; min-height:42px; padding-block:8px}
-.hand{display:flex; justify-content:center; align-items:flex-end; height:calc(var(--hw)*1.6 + 14px); padding-top:14px}
+.hand{display:flex; justify-content:center; align-items:flex-end; height:calc(var(--hw)*1.6 + 26px); padding-top:12px; padding-bottom:14px}
 .hand .card{--w:var(--hw); margin:0 calc(var(--hw)*-.04); transform:rotate(var(--r,0deg)) translateY(var(--y,0px)); transform-origin:50% 100%}
 .hand .card.sel{transform:rotate(var(--r,0deg)) translateY(calc(var(--y,0px) - 18px)); box-shadow:0 0 0 3px var(--gold), 0 14px 26px rgba(0,0,0,.45); z-index:2}
 .hand.off .card{filter:saturate(.75) brightness(.88)}
@@ -171,7 +181,9 @@ label{display:flex; flex-direction:column; gap:7px; font-size:.82rem; color:var(
 .hint:empty{display:none}
 .final{text-align:center; font-weight:700; padding:10px; border-radius:12px; background:rgba(230,180,80,.1); border:1px solid var(--gold-2); margin:0}
 .final b{color:var(--gold); font-size:1.2em}
-.chip .series{font-style:normal; color:var(--gold); font-size:.7rem; letter-spacing:.05em}
+.chip .series{display:flex; flex-direction:column; gap:2px}
+.chip .series span{width:6px; height:6px; border-radius:50%; border:1px solid var(--gold)}
+.chip .series span.on{background:var(--gold)}
 tr.reveal{animation:rowin .4s ease both}
 @keyframes rowin{from{opacity:0; transform:translateX(-10px)}to{opacity:1; transform:none}}
 .flash .quip{font-size:1.1rem; font-weight:800; text-align:center; color:var(--ink); max-width:18em; text-wrap:balance}
@@ -283,6 +295,24 @@ function coppaSVG(simple) {
     ${simple ? '' : `<path d="M12 6.4h16M13 7.2h14M14.5 5.6h11" stroke="#6f1812" stroke-width=".3"/>
     <circle cx="20" cy="10.9" r="1.3" fill="${Yc}" ${k} stroke-width=".45"/><circle cx="20" cy="10.9" r=".5" fill="none" ${k} stroke-width=".3"/>`}`;
 }
+// Bastone: Piacentine club — olive-green wood, thicker at the top, red cut ends with growth rings, yellow highlights.
+function bastoneSVG(simple) {
+  const k = 'stroke="#1a1714"', Gc = '#56652a', Rc = '#d23a2b', Yc = '#f3cf3c', w = simple ? 1.1 : .7;
+  return `<g transform="translate(9 0) scale(1.38 1) translate(-9 0)">
+    <path d="M3.2 7.2C2.3 16 3.8 30 5.5 44c.7 6 .9 11.6 1.3 16.4l5.6-.9c-.2-7.4.2-19.6 1.2-31.5.8-8 1.8-16.4 1.4-22z" fill="${Gc}" ${k} stroke-width="${w}"/>
+    ${simple ? '' : `<g fill="none" stroke="#26300f" stroke-width=".35" stroke-linecap="round">
+      <path d="M6 11c.4 14 1.8 29 3 47"/><path d="M11.6 10c-.1 13-.5 30-.9 48"/><path d="M8.8 12c.2 10 .6 22 1 34"/>
+      <path d="M13.4 14c-.3 5-.6 11-.9 17M4.6 20c.4 6 .9 12 1.4 18"/></g>`}
+    <g fill="${Yc}" ${simple ? '' : `${k} stroke-width=".3"`}>
+      <ellipse cx="5.4" cy="16.5" rx="${simple ? 1.2 : 1}" ry="${simple ? 3 : 2.7}" transform="rotate(-4 5.4 16.5)"/>
+      <ellipse cx="6.9" cy="31" rx="${simple ? 1.1 : .95}" ry="${simple ? 2.8 : 2.5}" transform="rotate(-5 6.9 31)"/>
+      ${simple ? '' : `<ellipse cx="8.2" cy="44.5" rx=".85" ry="2" transform="rotate(-6 8.2 44.5)"/><ellipse cx="9.3" cy="54.5" rx=".7" ry="1.6"/>`}
+    </g>
+    <ellipse cx="9.1" cy="6.5" rx="6.1" ry="3.5" transform="rotate(-12 9.1 6.5)" fill="${Rc}" ${k} stroke-width="${w}"/>
+    ${simple ? `<ellipse cx="9.1" cy="6.5" rx="2.6" ry="1.4" transform="rotate(-12 9.1 6.5)" fill="none" stroke="#8a1d14" stroke-width=".7"/>`
+      : `<g fill="none" stroke="#8a1d14" stroke-width=".35" transform="rotate(-12 9.1 6.5)"><ellipse cx="9.1" cy="6.5" rx="4.4" ry="2.4"/><ellipse cx="9.1" cy="6.5" rx="2.8" ry="1.5"/><ellipse cx="9.1" cy="6.5" rx="1.2" ry=".6"/></g>`}
+    <ellipse cx="9.6" cy="60.1" rx="2.95" ry="1.6" transform="rotate(-10 9.6 60.1)" fill="${Rc}" ${k} stroke-width="${w}"/></g>`;
+}
 const PIPS = {   // [viewBox, markup]
   d: ['0 0 40 40', denaroSVG(false)],
   ds: ['0 0 40 40', denaroSVG(true)],
@@ -292,11 +322,8 @@ const PIPS = {   // [viewBox, markup]
       <rect x=".8" y="41.6" width="14.4" height="3.8" rx="1.9" fill="${Y}" ${K}/>
       <rect x="5.9" y="45.4" width="4.2" height="12.4" fill="${R}" ${K}/><path d="M6 48.5h4M6 51.5h4M6 54.5h4" stroke="#1e1a16" stroke-width=".7"/>
       <circle cx="8" cy="60.4" r="3" fill="${Y}" ${K}/>`],
-  b: ['0 0 18 64', `<path d="M6.2 62.5C5.3 46 3 22 3.6 9.5 3.9 2.5 14.5 1.6 14.6 9c.3 12.5-2.4 37-3.4 53.5z" fill="${WOOD}" ${K}/>
-      <path d="M5 10.5c2 1.2 5.8 1.2 8.6-.4" stroke="${R}" stroke-width="2.2" fill="none"/>
-      <g fill="#6b3a12" ${K}><ellipse cx="6.2" cy="21" rx="2.1" ry="1.5"/><ellipse cx="12" cy="31" rx="2" ry="1.4"/><ellipse cx="6.8" cy="41" rx="1.9" ry="1.4"/><ellipse cx="11.3" cy="50.5" rx="1.8" ry="1.3"/></g>
-      <path d="M4.3 21c-3.4-2.8-4-6-2.7-7.6 1.6 1 2.9 3.5 2.7 7.6zM13.9 31c3.4-2.6 4-5.8 2.8-7.4-1.6.9-3 3.4-2.8 7.4z" fill="${G}" ${K}/>
-      <path d="M6.6 62.4h4.4" stroke="${Y}" stroke-width="2.4"/>`]
+  b: ['0 0 18 64', bastoneSVG(false)],
+  bs: ['0 0 18 64', bastoneSVG(true)]
 };
 const LONG = { s: 16 / 64, b: 18 / 64 };   // width/height ratio of the long pips
 const SC = {d:'#a87a0c', c:R, s:BL, b:G};
@@ -312,7 +339,7 @@ const LONGLAYOUT = {   // swords stand upright side by side, clubs lean alternat
 };
 function pip(s, cx, cy, size, rot = 0) {
   const h = size, w = LONG[s] ? size * LONG[s] : size;
-  return `<use href="#pip-${(s === 'd' || s === 'c') && size < 40 ? s + 's' : s}" x="${cx - w / 2}" y="${cy - h / 2}" width="${w}" height="${h}"${rot ? ` transform="rotate(${rot} ${cx} ${cy})"` : ''}/>`;
+  return `<use href="#pip-${((s === 'd' || s === 'c') && size < 40) || (s === 'b' && size < 70) ? s + 's' : s}" x="${cx - w / 2}" y="${cy - h / 2}" width="${w}" height="${h}"${rot ? ` transform="rotate(${rot} ${cx} ${cy})"` : ''}/>`;
 }
 const FIGCOL = { d:[BL, R], c:[R, G], s:[G, R], b:[R, BL] };
 const head = (cy, beard) => `
@@ -369,6 +396,7 @@ function faceSVG(id) {
   let body;
   if (FIG[r]) body = figureSVG(r, s);
   else if (r === 1 && (s === 'd' || s === 'c')) body = pip(s, 50, 80, 82);
+  else if (r === 1 && s === 'b') body = pip('b', 50, 80, 128, 14);
   else if (r === 1) body = `<circle cx="50" cy="80" r="38" fill="none" stroke="${SC[s]}" stroke-width="1" opacity=".35"/><circle cx="50" cy="80" r="34" fill="none" stroke="${SC[s]}" stroke-width=".6" opacity=".35"/>
       <path d="M22 108q-6-12 2-22M78 108q6-12-2-22M22 52q-6 12 2 22M78 52q6 12-2 22" stroke="${G}" stroke-width="2" fill="none" opacity=".75"/>
       ${LONG[s] ? pip(s, 50, 80, 112, s === 'b' ? 12 : 0) : pip(s, 50, 80, s === 'd' ? 0 : 58)}`;
@@ -742,7 +770,7 @@ function probeOnce() {
 
 // ================= Players & win history =================
 // Each phone keeps the list of finished matches; phones merge their lists whenever they play together.
-const VERSION = 17;
+const VERSION = 19;
 const NAMES = ['Maurizio', 'Giancarlo', 'Ospite 1', 'Ospite 2'];
 const REGULARS = ['Maurizio', 'Giancarlo'];
 const allowedNames = n => NAMES.slice(0, Math.max(2, n));   // 2: Maurizio e Giancarlo · 3: + Ospite 1 · 4: + Ospite 2
@@ -868,7 +896,7 @@ function renderConnecting() {
     <p class="muted">Chi ha creato la partita deve avere il gioco aperto sul telefono.</p><p class="err" id="jerr"></p></div>`;
   $('#back').onclick = () => { stopGuest(); goHome(); };
 }
-const connPill = () => netOk ? '<span class="pill ok">Collegato</span>' : '<span class="pill bad">Ricollego…</span>';
+const connPill = () => netOk ? '<span class="pill ok" title="Collegato"><span class="cdot"></span><span class="ctext">Collegato</span></span>' : '<span class="pill bad" title="Ricollego"><span class="cdot"></span><span class="ctext">Ricollego…</span></span>';
 
 function renderWait() {
   const s = V, full = s.players.length === s.nPlayers, host = role === 'host';
@@ -1032,14 +1060,19 @@ function fitTable() {
     return 24;
   };
   const w0 = bestFor(0), w3 = bestFor(.3), w5 = bestFor(.48);
-  let w = w0, ov = 0;
-  if (w0 < 56) { if (w3 / 1.12 > w) { w = w3; ov = .3; } if (w5 / 1.25 > w / (ov ? 1.12 : 1)) { w = w5; ov = .48; } }
+  // overlapping is a last resort: it must win clearly over a tidy, non-overlapping layout
+  let w = w0, ov = 0, score = w0;
+  if (w3 / 1.2 > score) { w = w3; ov = .3; score = w3 / 1.2; }
+  if (w5 / 1.6 > score) { w = w5; ov = .48; }
   box.style.setProperty('--tw', w + 'px'); box.style.setProperty('--tg', g + 'px');
   box.style.setProperty('--tmr', ov ? (-w * ov) + 'px' : '0px');
   box.style.columnGap = ov ? '0px' : g + 'px';
   box.style.paddingRight = ov ? (w * ov) + 'px' : '0px';
 }
-addEventListener('resize', () => fitTable());
+function syncVH() { const h = window.visualViewport?.height || innerHeight; document.documentElement.style.setProperty('--vvh', Math.round(h) + 'px'); fitTable(); }
+addEventListener('resize', syncVH); addEventListener('orientationchange', () => setTimeout(syncVH, 250));
+window.visualViewport?.addEventListener('resize', syncVH);
+syncVH();
 function fanStyle(i, k) { const c = i - (k - 1) / 2; return `--r:${c * 7}deg; --y:${Math.abs(c) * 7}px`; }
 function slotFor(rel, n) { return (n === 2 ? ['bottom', 'top'] : n === 3 ? ['bottom', 'tr', 'tl'] : ['bottom', 'right', 'top', 'left'])[rel]; }
 
@@ -1054,7 +1087,7 @@ function renderGame() {
   const optCards = new Set(opts.flat());
   const fitCards = new Set(opts.filter(o => pick.every(x => o.includes(x))).flat());   // what still completes your pick
 
-  const chips = [...Array(nTeams(s)).keys()].map(t => `<div class="chip ${t === myTeam ? 'mine' : ''}"><span>${esc(teamName(s, t))}</span><b>${s.scores[t] || 0}</b>${s.game === 'scopa' && bestOf(s) === 3 ? `<i class="series" title="Partite vinte">${'●'.repeat(s.games?.[t] || 0)}${'○'.repeat(2 - (s.games?.[t] || 0))}</i>` : ''}</div>`).join('');
+  const chips = [...Array(nTeams(s)).keys()].map(t => `<div class="chip ${t === myTeam ? 'mine' : ''}"><span>${esc(teamName(s, t))}</span><b>${s.scores[t] || 0}</b>${s.game === 'scopa' && bestOf(s) === 3 ? `<i class="series" title="Partite vinte">${[0, 1].map(k => `<span class="${k < (s.games?.[t] || 0) ? 'on' : ''}"></span>`).join('')}</i>` : ''}</div>`).join('');
   const opps = [];
   for (let k = 1; k < n; k++) {
     const i = (my + k) % n, p = s.players[i], cnt = (h.hands[i] || []).length;
@@ -1076,20 +1109,19 @@ function renderGame() {
   } else {
     const fresh = h.lastMove && !h.lastMove.take.length ? h.lastMove.card : null;
     felt += h.table.length ? `<div class="tablecards" id="tbl">${h.table.map(c => `<button class="card s-${suit(c)} ${pick.includes(c) ? 'picked ' : fitCards.has(c) ? 'opt ' : ''}${c === fresh ? 'fresh' : ''}" data-t="${c}" ${optCards.has(c) ? '' : 'tabindex="-1"'} aria-label="${cardName(c)}">${cardInner(c)}</button>`).join('')}</div>` : `<div class="empty-felt">Tavolo vuoto</div>`;
-    felt += h.deck.length ? `<div class="deck-wrap">${deckPile}</div>` : '';
   }
 
   let status;
   if (s.status !== 'playing') status = 'Mano finita';
   else if (bris && h.trickDone) status = h.trickWinner === my ? 'Prendi tu' : (n === 4 && teamOf(s, h.trickWinner) === myTeam ? 'Prende il tuo compagno' : 'Prende ' + esc(s.players[h.trickWinner].nick));
-  else status = myTurn ? 'Tocca a te' : 'Tocca a ' + esc(s.players[h.turn].nick);
+  else status = myTurn ? (sel ? 'Scegli sul tavolo cosa prendere' : 'Tocca a te') : 'Tocca a ' + esc(s.players[h.turn].nick);
 
-  const hint = myTurn && sel ? 'Più prese possibili: tocca sul tavolo le carte che vuoi prendere' : '';
+  const hint = '';
 
   app.innerHTML = `
-    <div class="topbar"><button class="ghost mini" id="back">← Esci</button><div class="scores">${chips}</div><button class="ghost icon" id="mute" aria-label="${muted ? 'Attiva i suoni' : 'Togli i suoni'}" aria-pressed="${!muted}">${speakerSVG(!muted)}</button>${connPill()}</div>
-    <div class="opps">${opps.join('')}</div>
-    <div class="rim"><div class="felt ${!bris && h.deck.length ? 'has-deck' : ''}">${felt}</div></div>
+    <div class="topbar"><button class="ghost mini" id="back">← Esci</button><div class="scores">${chips}</div><button class="ghost icon" id="mute" aria-label="${muted ? 'Attiva i suoni' : 'Togli i suoni'}" aria-pressed="${!muted}">${speakerSVG(!muted)}<span class="netdot ${netOk ? 'ok' : 'bad'}" title="${netOk ? 'Collegato' : 'Ricollego…'}"></span></button></div>
+    <div class="opps">${!bris && h.deck.length ? `<div class="sidedeck" aria-label="Mazzo">${backHTML()}${backHTML()}${backHTML()}</div>` : ''}${opps.join('')}</div>
+    <div class="rim"><div class="felt">${felt}</div></div>
     <p class="status ${myTurn ? 'me' : ''}">${status}</p>
     <p class="hint">${hint}</p>
     <div class="hand ${myTurn ? '' : 'off'}" id="hand">${myHand.map((c, i) => `<button class="card s-${suit(c)} ${c === sel ? 'sel' : ''}" style="${fanStyle(i, myHand.length)}" data-c="${c}" ${myTurn ? '' : 'disabled'} aria-label="${cardName(c)}">${cardInner(c)}</button>`).join('')}</div>
