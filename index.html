@@ -222,12 +222,39 @@ function shuffle(a) { const rnd = new Uint32Array(a.length); crypto.getRandomVal
 // red/blue/yellow/green palette, corner numbers, pips laid out by count, full-length figures.
 const K = 'stroke="#1e1a16" stroke-width="1.1" stroke-linejoin="round"';
 const Y = '#f2c230', R = '#c62f2a', BL = '#2b5aa8', G = '#2e7d32', SKIN = '#f3d2b0', WOOD = '#9a5a26';
+// Denaro: yellow coin with a ring of dots, a ring of triangles, inner dots and a red sun face — the classic Piacentine coin.
+function denaroSVG(simple) {
+  const C = 20, pt = (r, a) => [(C + r * Math.cos(a)).toFixed(2), (C + r * Math.sin(a)).toFixed(2)];
+  const k = 'stroke="#1a1714"', Yc = '#f6c92e', Rc = '#d6382b';
+  const face = (sc) => `<g transform="translate(20 20) scale(${sc}) translate(-20 -20)">
+      <g ${k} stroke-width=".55" fill="none" stroke-linecap="round">
+        <path d="M15.9 17.1q1.4-.9 2.8 0M21.3 17.1q1.4-.9 2.8 0"/><path d="M20 18.4v3.1q-.9.5-.1.9"/>
+        <path d="M17.9 23.4q2.1 1.1 4.2 0"/>${sc > 1 ? '' : '<path d="M18.6 24.6q1.4.5 2.8 0"/><path d="M14.7 21.2q.5 2.5 2.2 3.8M25.3 21.2q-.5 2.5-2.2 3.8"/>'}
+      </g>
+      <g ${k} stroke-width=".45"><ellipse cx="17.3" cy="18.7" rx="1.35" ry=".78" fill="#f6e6c6"/><ellipse cx="22.7" cy="18.7" rx="1.35" ry=".78" fill="#f6e6c6"/></g>
+      <circle cx="17.4" cy="18.7" r=".45" fill="#1a1714"/><circle cx="22.6" cy="18.7" r=".45" fill="#1a1714"/></g>`;
+  if (simple) {   // small coins on number cards: fewer, bigger details so they stay readable
+    let dots = ''; for (let i = 0; i < 12; i++) { const [x, y] = pt(15.2, i / 12 * 2 * Math.PI); dots += `<circle cx="${x}" cy="${y}" r="2.1"/>`; }
+    return `<circle cx="20" cy="20" r="19" fill="${Yc}" ${k} stroke-width="1.2"/>
+      <g fill="${Yc}" ${k} stroke-width=".8">${dots}</g>
+      <circle cx="20" cy="20" r="11.6" fill="${Yc}" ${k} stroke-width=".9"/>
+      <circle cx="20" cy="20" r="9.6" fill="${Rc}" ${k} stroke-width="1"/>${face(1.22)}`;
+  }
+  let outer = '', inner = '', zig = '';
+  for (let i = 0; i < 18; i++) { const [x, y] = pt(15.9, i / 18 * 2 * Math.PI); outer += `<circle cx="${x}" cy="${y}" r="1.8"/>`; }
+  for (let i = 0; i < 14; i++) { const [x, y] = pt(9.15, (i + .5) / 14 * 2 * Math.PI); inner += `<circle cx="${x}" cy="${y}" r="1.05"/>`; }
+  for (let i = 0; i <= 36; i++) { const [x, y] = pt(i % 2 ? 10.55 : 13.65, i / 36 * 2 * Math.PI); zig += (i ? 'L' : 'M') + x + ' ' + y; }
+  return `<circle cx="20" cy="20" r="19.3" fill="${Yc}" ${k} stroke-width=".9"/>
+    <circle cx="20" cy="20" r="13.75" fill="${Yc}" ${k} stroke-width=".45"/>
+    <g fill="${Yc}" ${k} stroke-width=".38">${outer}</g>
+    <path d="${zig}Z" fill="none" ${k} stroke-width=".38" stroke-linejoin="miter"/>
+    <circle cx="20" cy="20" r="10.45" fill="${Yc}" ${k} stroke-width=".4"/>
+    <g fill="${Yc}" ${k} stroke-width=".32">${inner}</g>
+    <circle cx="20" cy="20" r="7.7" fill="${Rc}" ${k} stroke-width=".55"/>${face(1)}`;
+}
 const PIPS = {   // [viewBox, markup]
-  d: ['0 0 40 40', `<circle cx="20" cy="20" r="18" fill="${Y}" ${K}/><circle cx="20" cy="20" r="14.5" fill="none" stroke="${R}" stroke-width="2.2"/>
-      <circle cx="20" cy="20" r="11" fill="#f8dc6e" ${K}/>
-      <g fill="${G}" ${K}><ellipse cx="20" cy="13.5" rx="2.6" ry="4.6"/><ellipse cx="20" cy="26.5" rx="2.6" ry="4.6"/><ellipse cx="13.5" cy="20" rx="4.6" ry="2.6"/><ellipse cx="26.5" cy="20" rx="4.6" ry="2.6"/></g>
-      <circle cx="20" cy="20" r="3.4" fill="${R}" ${K}/>
-      <g fill="${R}"><circle cx="20" cy="3.6" r="1"/><circle cx="20" cy="36.4" r="1"/><circle cx="3.6" cy="20" r="1"/><circle cx="36.4" cy="20" r="1"/><circle cx="8.4" cy="8.4" r="1"/><circle cx="31.6" cy="31.6" r="1"/><circle cx="31.6" cy="8.4" r="1"/><circle cx="8.4" cy="31.6" r="1"/></g>`],
+  d: ['0 0 40 40', denaroSVG(false)],
+  ds: ['0 0 40 40', denaroSVG(true)],
   c: ['0 0 40 40', `<path d="M7 4h26c0 10-5.5 16-13 17C12.5 20 7 14 7 4z" fill="${Y}" ${K}/>
       <path d="M8 7.5h24" stroke="${R}" stroke-width="2.6"/><path d="M10 12.5h20" stroke="${BL}" stroke-width="1.6"/>
       <rect x="18.3" y="20.5" width="3.4" height="9" fill="${Y}" ${K}/><ellipse cx="20" cy="24.5" rx="4.4" ry="2.4" fill="${BL}" ${K}/>
@@ -256,7 +283,7 @@ const LONGLAYOUT = {   // swords stand upright side by side, clubs lean alternat
 };
 function pip(s, cx, cy, size, rot = 0) {
   const h = size, w = LONG[s] ? size * LONG[s] : size;
-  return `<use href="#pip-${s}" x="${cx - w / 2}" y="${cy - h / 2}" width="${w}" height="${h}"${rot ? ` transform="rotate(${rot} ${cx} ${cy})"` : ''}/>`;
+  return `<use href="#pip-${s === 'd' && size < 40 ? 'ds' : s}" x="${cx - w / 2}" y="${cy - h / 2}" width="${w}" height="${h}"${rot ? ` transform="rotate(${rot} ${cx} ${cy})"` : ''}/>`;
 }
 const FIGCOL = { d:[BL, R], c:[R, G], s:[G, R], b:[R, BL] };
 const head = (cy, beard) => `
@@ -312,14 +339,15 @@ function faceSVG(id) {
   const r = rank(id), s = suit(id);
   let body;
   if (FIG[r]) body = figureSVG(r, s);
+  else if (r === 1 && s === 'd') body = pip('d', 50, 80, 82);
   else if (r === 1) body = `<circle cx="50" cy="80" r="38" fill="none" stroke="${SC[s]}" stroke-width="1" opacity=".35"/><circle cx="50" cy="80" r="34" fill="none" stroke="${SC[s]}" stroke-width=".6" opacity=".35"/>
       <path d="M22 108q-6-12 2-22M78 108q6-12-2-22M22 52q-6 12 2 22M78 52q6 12-2 22" stroke="${G}" stroke-width="2" fill="none" opacity=".75"/>
-      ${LONG[s] ? pip(s, 50, 80, 112, s === 'b' ? 12 : 0) : pip(s, 50, 80, 58)}`;
+      ${LONG[s] ? pip(s, 50, 80, 112, s === 'b' ? 12 : 0) : pip(s, 50, 80, s === 'd' ? 0 : 58)}`;
   else if (LONG[s]) {
     const len = r <= 3 ? (s === 'b' ? 88 : 96) : 60;
     body = LONGLAYOUT[r].map(([x, y], i) => pip(s, x, y, len, s === 'b' ? (i % 2 ? 14 : -14) : 0)).join('');
   }
-  else body = LAYOUT[r].map(([x, y]) => pip(s, x, y, r >= 6 ? 24 : 27)).join('');
+  else body = LAYOUT[r].map(([x, y]) => pip(s, x, y, s === 'd' ? (r >= 6 ? 27 : 30) : (r >= 6 ? 24 : 27))).join('');
   return `<svg class="face" viewBox="0 0 100 160" aria-hidden="true">${body}</svg>`;
 }
 const cardInner = id => `${faceSVG(id)}<span class="rk">${rank(id)}</span><span class="rk b">${rank(id)}</span>`;
@@ -672,7 +700,7 @@ function probeOnce() {
 
 // ================= Players & win history =================
 // Each phone keeps the list of finished matches; phones merge their lists whenever they play together.
-const VERSION = 14;
+const VERSION = 15;
 const NAMES = ['Maurizio', 'Giancarlo', 'Ospite 1', 'Ospite 2'];
 const REGULARS = ['Maurizio', 'Giancarlo'];
 const allowedNames = n => NAMES.slice(0, Math.max(2, n));   // 2: Maurizio e Giancarlo · 3: + Ospite 1 · 4: + Ospite 2
