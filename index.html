@@ -61,12 +61,9 @@ label{display:flex; flex-direction:column; gap:6px; font-size:.85rem; color:var(
 /* Cards */
 .card{--w:64px; width:var(--w); height:calc(var(--w)*1.6); flex:none; position:relative; background:var(--card); border:1px solid var(--card-edge); border-radius:calc(var(--w)*.11); color:var(--sc); box-shadow:0 2px 0 rgba(0,0,0,.25), 0 6px 14px rgba(0,0,0,.25); display:flex; align-items:center; justify-content:center; padding:0; min-height:0; font-weight:400; transition:transform .15s ease, box-shadow .15s ease}
 .card::before{content:""; position:absolute; inset:calc(var(--w)*.06); border:1.5px solid var(--sc); border-radius:calc(var(--w)*.07); opacity:.55}
-.card .rk{position:absolute; top:calc(var(--w)*.09); left:calc(var(--w)*.12); font-family:var(--display); font-size:calc(var(--w)*.3); line-height:1}
-.card .rk.b{top:auto; left:auto; bottom:calc(var(--w)*.09); right:calc(var(--w)*.12); transform:rotate(180deg)}
-.card .ic{width:58%; height:auto; display:block}
-.card .fig{display:flex; flex-direction:column; align-items:center; gap:2px}
-.card .fig .ic{width:calc(var(--w)*.42)}
-.card .fig span{font-family:var(--display); font-size:calc(var(--w)*.17); color:var(--card-ink)}
+.card .rk{position:absolute; top:calc(var(--w)*.08); left:calc(var(--w)*.1); font-family:var(--display); font-size:calc(var(--w)*.21); line-height:1; z-index:1}
+.card .rk.b{top:auto; left:auto; bottom:calc(var(--w)*.08); right:calc(var(--w)*.1); transform:rotate(180deg)}
+.card .face{position:absolute; inset:0; width:100%; height:100%; display:block}
 .card.s-d{--sc:var(--gold)} .card.s-c{--sc:var(--red)} .card.s-s{--sc:var(--blue)} .card.s-b{--sc:var(--green)}
 .back{background:repeating-linear-gradient(45deg, #7d1f24 0 4px, #93282e 4px 8px); border:2px solid var(--card); --sc:var(--card)}
 .back::before{opacity:.5}
@@ -136,17 +133,64 @@ const FIG = {8:['F','Fante'], 9:['C','Cavallo'], 10:['R','Re']};
 const PRIM = {7:21, 6:18, 1:16, 5:15, 4:14, 3:13, 2:12, 8:10, 9:10, 10:10};
 const rank = id => +id.slice(1), suit = id => id[0];
 const cardName = id => (FIG[rank(id)] ? FIG[rank(id)][1] : rank(id)) + ' di ' + SUITS[suit(id)];
-const ICON = {
-  d:'<svg class="ic" viewBox="0 0 40 40" aria-hidden="true"><circle cx="20" cy="20" r="16" fill="#e2b34a" stroke="#8a6414" stroke-width="2"/><circle cx="20" cy="20" r="9.5" fill="none" stroke="#8a6414" stroke-width="2"/><circle cx="20" cy="20" r="3.6" fill="#b3262d"/></svg>',
-  c:'<svg class="ic" viewBox="0 0 40 40" aria-hidden="true"><path d="M8 6h24c0 10-5 16-12 17C13 22 8 16 8 6z" fill="#b3262d" stroke="#6e1418" stroke-width="1.5"/><path d="M10 8h20" stroke="#e2b34a" stroke-width="2"/><rect x="18" y="22.5" width="4" height="8" fill="#c08a1e"/><path d="M11 36h18l-3-5H14z" fill="#b3262d" stroke="#6e1418" stroke-width="1.5"/></svg>',
-  s:'<svg class="ic" viewBox="0 0 40 40" aria-hidden="true"><path d="M20 2l4 6v19h-8V8z" fill="#dfe6f0" stroke="#22509b" stroke-width="1.6"/><rect x="9" y="26.5" width="22" height="4" rx="2" fill="#22509b"/><rect x="18" y="30.5" width="4" height="5.5" fill="#7a4b1e"/><circle cx="20" cy="37.2" r="2.3" fill="#22509b"/></svg>',
-  b:'<svg class="ic" viewBox="0 0 40 40" aria-hidden="true"><path d="M14.5 3.5c4-2 9.2-.2 10.2 4l4.3 25.5c.5 3.2-2 5.5-5 5.5s-5.3-2-5.4-4.2L13 9.2c-.5-2.4.3-4.6 1.5-5.7z" fill="#8a5a2b" stroke="#4e2f12" stroke-width="1.4"/><circle cx="19.5" cy="13" r="2.1" fill="#2e6a35"/><circle cx="23.3" cy="22.5" r="2.1" fill="#2e6a35"/><circle cx="21" cy="31" r="1.8" fill="#2e6a35"/></svg>'
+// Piacentine-style deck, drawn from scratch: Spanish suits, corner numbers, pips laid out by count, full-length figures.
+const PIPS = {
+  d:'<circle cx="20" cy="20" r="17" fill="#e2b34a" stroke="#8a6414" stroke-width="2"/><circle cx="20" cy="20" r="12" fill="none" stroke="#8a6414" stroke-width="1.4" stroke-dasharray="2 2"/><path d="M20 7l3.2 9.8L33 20l-9.8 3.2L20 33l-3.2-9.8L7 20l9.8-3.2z" fill="#b3262d" stroke="#6e1418" stroke-width=".8"/><circle cx="20" cy="20" r="3" fill="#e2b34a"/>',
+  c:'<path d="M7 5h26c0 11-6 17-13 18C13 22 7 16 7 5z" fill="#c8302f" stroke="#6e1418" stroke-width="1.5"/><path d="M8.5 8.5h23" stroke="#e2b34a" stroke-width="2.4"/><path d="M17 23h6l-1 3h-4z" fill="#e2b34a" stroke="#8a6414" stroke-width=".8"/><rect x="18.2" y="26" width="3.6" height="5" fill="#e2b34a"/><path d="M11 37h18l-4-6H15z" fill="#c8302f" stroke="#6e1418" stroke-width="1.5"/>',
+  s:'<path d="M20 1l3.4 5v22h-6.8V6z" fill="#e6ecf4" stroke="#22509b" stroke-width="1.4"/><path d="M20 6v21" stroke="#9fb3cf" stroke-width="1"/><path d="M8 27.5c4-2 20-2 24 0v3c-4-2-20-2-24 0z" fill="#e2b34a" stroke="#8a6414" stroke-width="1"/><rect x="18" y="30.5" width="4" height="5.5" fill="#22509b"/><circle cx="20" cy="37.4" r="2.4" fill="#e2b34a" stroke="#8a6414" stroke-width=".8"/>',
+  b:'<path d="M15 2.5c4-1.6 9 .3 9.8 4.3l4.6 26c.5 3.2-2 5.4-5 5.4s-5.2-2-5.4-4.3L13.4 8.3c-.5-2.4.4-4.8 1.6-5.8z" fill="#9a6532" stroke="#4e2f12" stroke-width="1.3"/><path d="M14.5 9.5l-3-2M17.8 17l-3.4-1M20 25.5l-3.4.4M23 12l3.2-1.6M25 21l3.4-.6" stroke="#4e2f12" stroke-width="1.6" stroke-linecap="round"/><path d="M17 8c2 2 4 2 6 1M19 16c2 2 4 2 6 1M21 25c2 2 4 2 6 1" stroke="#2e6a35" stroke-width="1.6" fill="none" stroke-linecap="round"/>'
 };
-function cardInner(id) {
-  const r = rank(id), s = suit(id), lbl = FIG[r] ? FIG[r][0] : r;
-  const mid = FIG[r] ? `<div class="fig">${ICON[s]}<span>${FIG[r][1]}</span></div>` : ICON[s];
-  return `<span class="rk">${lbl}</span>${mid}<span class="rk b">${lbl}</span>`;
+const SC = {d:'#c08a1e', c:'#b3262d', s:'#22509b', b:'#2e6a35'};
+const LAYOUT = {
+  1:[[50,80]], 2:[[50,42],[50,118]], 3:[[50,34],[50,80],[50,126]],
+  4:[[33,42],[67,42],[33,118],[67,118]], 5:[[33,40],[67,40],[50,80],[33,120],[67,120]],
+  6:[[33,36],[67,36],[33,80],[67,80],[33,124],[67,124]], 7:[[33,34],[67,34],[50,57],[33,80],[67,80],[33,126],[67,126]]
+};
+const pip = (s, cx, cy, size, flip) => `<use href="#pip-${s}" x="${cx - size / 2}" y="${cy - size / 2}" width="${size}" height="${size}"${flip ? ` transform="rotate(180 ${cx} ${cy})"` : ''}/>`;
+const HEAD = (cy, beard) => `<circle cx="50" cy="${cy}" r="9" fill="#f1cda6" stroke="#3a2a1a" stroke-width="1.2"/><circle cx="46.5" cy="${cy - 1}" r="1" fill="#3a2a1a"/><circle cx="53.5" cy="${cy - 1}" r="1" fill="#3a2a1a"/>${beard ? `<path d="M42 ${cy + 3}q8 14 16 0q-8 4-16 0z" fill="#7a5a3a"/>` : `<path d="M47 ${cy + 4}q3 2 6 0" stroke="#3a2a1a" stroke-width="1" fill="none"/>`}`;
+function figureSVG(r, s) {
+  const col = SC[s], ink = 'stroke="#2a1d10" stroke-width="1.3"';
+  if (r === 8) return `
+    <rect x="41" y="106" width="7" height="30" fill="#3a2a1a"/><rect x="52" y="106" width="7" height="30" fill="#3a2a1a"/>
+    <path d="M38 136h11v5H35zM51 136h11l3 5H51z" fill="#3a2a1a"/>
+    <path d="M37 56h26l7 52H30z" fill="${col}" ${ink}/><path d="M50 56v52" stroke="#e2b34a" stroke-width="2"/>
+    <rect x="31" y="98" width="38" height="5" fill="#e2b34a" ${ink}/>
+    <path d="M37 60l-8 26 5 2 8-22z" fill="${col}" ${ink}/>
+    ${HEAD(44, false)}
+    <path d="M38 41c0-12 24-12 24 0z" fill="#e2b34a" ${ink}/><path d="M58 33c6-6 10-6 13-4-5 0-8 3-11 6z" fill="${col}"/>
+    ${pip(s, 70, 74, 26)}`;
+  if (r === 9) return `
+    <path d="M14 104c2-14 16-20 36-20s30 6 34 18l-3 10H18z" fill="#a8743f" ${ink}/>
+    <rect x="22" y="110" width="6" height="30" fill="#a8743f" ${ink}/><rect x="34" y="110" width="6" height="28" fill="#a8743f" ${ink}/><rect x="62" y="110" width="6" height="28" fill="#a8743f" ${ink}/><rect x="74" y="108" width="6" height="32" fill="#a8743f" ${ink}/>
+    <path d="M74 98l8-28c4-4 12-2 14 4l-4 10-6 2-2 14z" fill="#a8743f" ${ink}/><circle cx="88" cy="76" r="1.4" fill="#2a1d10"/><path d="M78 72l6-10" stroke="#5a3a1a" stroke-width="2.5"/>
+    <path d="M14 104c-6 6-8 16-6 22" stroke="#5a3a1a" stroke-width="4" fill="none" stroke-linecap="round"/>
+    <path d="M36 90h28l-4 10H40z" fill="${col}" ${ink}/>
+    <path d="M41 58h18l5 34H36z" fill="${col}" ${ink}/><path d="M50 58v34" stroke="#e2b34a" stroke-width="2"/>
+    ${HEAD(48, false)}
+    <path d="M40 44c0-11 20-11 20 0l4 2H36z" fill="#3a2a1a"/>
+    ${pip(s, 26, 62, 24)}`;
+  return `
+    <path d="M34 58h32l12 82H22z" fill="${col}" ${ink}/>
+    <path d="M47 58h6v82h-6z" fill="#f4ecda" stroke="#2a1d10" stroke-width=".8"/><path d="M49 70v4M51 88v4M49 106v4M51 124v4" stroke="#2a1d10" stroke-width="1.6"/>
+    <path d="M22 140h56" stroke="#e2b34a" stroke-width="4"/>
+    <path d="M34 60l-10 30 6 2 10-26z" fill="${col}" ${ink}/>
+    ${HEAD(46, true)}
+    <path d="M39 38l2-12 5 6 4-9 4 9 5-6 2 12z" fill="#e2b34a" ${ink}/><circle cx="50" cy="30" r="1.6" fill="#b3262d"/>
+    ${pip(s, 70, 76, 28)}`;
 }
+function faceSVG(id) {
+  const r = rank(id), s = suit(id);
+  let body;
+  if (FIG[r]) body = figureSVG(r, s);
+  else if (r === 1) body = `<circle cx="50" cy="80" r="34" fill="none" stroke="${SC[s]}" stroke-width="1" opacity=".35"/>${pip(s, 50, 80, 56)}`;
+  else body = LAYOUT[r].map(([x, y]) => pip(s, x, y, r >= 6 ? 24 : 27, (s === 's' || s === 'b') && y > 80)).join('');
+  return `<svg class="face" viewBox="0 0 100 160" aria-hidden="true">${body}</svg>`;
+}
+function cardInner(id) {
+  const r = rank(id);
+  return `<span class="rk">${r}</span>${faceSVG(id)}<span class="rk b">${r}</span>`;
+}
+document.body.insertAdjacentHTML('afterbegin', `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>${Object.entries(PIPS).map(([k, v]) => `<symbol id="pip-${k}" viewBox="0 0 40 40">${v}</symbol>`).join('')}</defs></svg>`);
 const cardHTML = (id, cls = '') => `<div class="card s-${suit(id)} ${cls}" aria-label="${cardName(id)}">${cardInner(id)}</div>`;
 const backHTML = () => `<div class="card back" aria-hidden="true"></div>`;
 function fullDeck() { const d = []; for (const s of 'dcsb') for (let r = 1; r <= 10; r++) d.push(s + r); return d; }
