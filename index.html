@@ -252,13 +252,41 @@ function denaroSVG(simple) {
     <g fill="${Yc}" ${k} stroke-width=".32">${inner}</g>
     <circle cx="20" cy="20" r="7.7" fill="${Rc}" ${k} stroke-width=".55"/>${face(1)}`;
 }
+// Coppa: Piacentine vase — red open rim, yellow leaf band with medallion, side knobs, olive band, red fluted bowl,
+// beaded stem and a foot with a decorated yellow base.
+function coppaSVG(simple) {
+  const k = 'stroke="#1a1714"', Rc = '#d6382b', Yc = '#f3cf3c', Gc = '#5c6a2c', w = simple ? 1 : .6;
+  let leaves = '', flutes = '', beads = '', base = '';
+  if (!simple) {
+    for (let x = 7.4; x < 33; x += 2.1) leaves += `<ellipse cx="${x.toFixed(1)}" cy="10" rx="1.05" ry=".7" transform="rotate(-25 ${x.toFixed(1)} 10)"/>`;
+    for (let x = 9; x <= 31; x += 2.2) flutes += `<path d="M${x.toFixed(1)} 16.4q${((20 - x) * .12).toFixed(2)} 3.6 ${((20 - x) * .3).toFixed(2)} 6.6"/>`;
+    for (let x = 10.6; x < 29.5; x += 2.6) base += `<rect x="${x.toFixed(1)}" y="34.9" width="1.6" height="1.5"/>`;
+  }
+  for (const x of [15.6, 17.8, 20, 22.2, 24.4]) beads += `<circle cx="${x}" cy="25" r="${simple ? 1.25 : 1.1}"/>`;
+  return `
+    <circle cx="3.4" cy="12.2" r="${simple ? 2.2 : 1.9}" fill="${Yc}" ${k} stroke-width="${w}"/><circle cx="36.6" cy="12.2" r="${simple ? 2.2 : 1.9}" fill="${Yc}" ${k} stroke-width="${w}"/>
+    <path d="M18 29.6C14 30.8 10.6 32.4 9.6 34.4h20.8c-1-2-4.4-3.6-8.4-4.8z" fill="${Gc}" ${k} stroke-width="${w}"/>
+    <rect x="9" y="34.2" width="22" height="3.6" rx=".6" fill="${Yc}" ${k} stroke-width="${w}"/>
+    ${base ? `<g fill="none" ${k} stroke-width=".4">${base}</g>` : ''}
+    <path d="M16.8 25.6l1.3 4.4h3.8l1.3-4.4z" fill="${Gc}" ${k} stroke-width="${w}"/>
+    ${simple ? '' : `<path d="M19 26.2v3.4M21 26.2v3.4" ${k} stroke-width=".35"/>`}
+    <path d="M6.6 16C8 20.2 12 23.2 16.6 23.8h6.8c4.6-.6 8.6-3.6 10-7.8z" fill="${Rc}" ${k} stroke-width="${w}"/>
+    ${flutes ? `<g fill="none" ${k} stroke-width=".4">${flutes}</g>` : ''}
+    <g fill="${Yc}" ${k} stroke-width="${simple ? .7 : .45}">${beads}</g>
+    <path d="M5.4 12.4C5.5 14 6 15 6.6 16h26.8c.6-1 1.1-2 1.2-3.6z" fill="${Gc}" ${k} stroke-width="${w}"/>
+    ${simple ? '' : `<path d="M7 14.2h26" stroke="#3f4a1c" stroke-width=".4" stroke-dasharray=".5 .5"/>`}
+    <path d="M7.2 7C5.6 9 5 11 5.4 12.4h29.2c.4-1.4-.2-3.4-1.8-5.4z" fill="${Yc}" ${k} stroke-width="${w}"/>
+    ${leaves ? `<g fill="#e3b52a" ${k} stroke-width=".3">${leaves}</g>` : ''}
+    <ellipse cx="20" cy="6" rx="13.2" ry="${simple ? 3.4 : 3.6}" fill="${Rc}" ${k} stroke-width="${w}"/>
+    <ellipse cx="20" cy="6.3" rx="10.4" ry="${simple ? 2 : 2.3}" fill="#9e241b" ${k} stroke-width="${simple ? .6 : .4}"/>
+    ${simple ? '' : `<path d="M12 6.4h16M13 7.2h14M14.5 5.6h11" stroke="#6f1812" stroke-width=".3"/>
+    <circle cx="20" cy="10.9" r="1.3" fill="${Yc}" ${k} stroke-width=".45"/><circle cx="20" cy="10.9" r=".5" fill="none" ${k} stroke-width=".3"/>`}`;
+}
 const PIPS = {   // [viewBox, markup]
   d: ['0 0 40 40', denaroSVG(false)],
   ds: ['0 0 40 40', denaroSVG(true)],
-  c: ['0 0 40 40', `<path d="M7 4h26c0 10-5.5 16-13 17C12.5 20 7 14 7 4z" fill="${Y}" ${K}/>
-      <path d="M8 7.5h24" stroke="${R}" stroke-width="2.6"/><path d="M10 12.5h20" stroke="${BL}" stroke-width="1.6"/>
-      <rect x="18.3" y="20.5" width="3.4" height="9" fill="${Y}" ${K}/><ellipse cx="20" cy="24.5" rx="4.4" ry="2.4" fill="${BL}" ${K}/>
-      <path d="M10 37h20l-4.5-7.5h-11z" fill="${Y}" ${K}/><path d="M12.5 34.5h15" stroke="${R}" stroke-width="1.6"/>`],
+  c: ['0 0 40 40', coppaSVG(false)],
+  cs: ['0 0 40 40', coppaSVG(true)],
   s: ['0 0 16 64', `<path d="M8 .8l3.1 6.2V42H4.9V7z" fill="#e7edf4" ${K}/><path d="M8 7v34" stroke="#9fb0c6" stroke-width="1"/>
       <rect x=".8" y="41.6" width="14.4" height="3.8" rx="1.9" fill="${Y}" ${K}/>
       <rect x="5.9" y="45.4" width="4.2" height="12.4" fill="${R}" ${K}/><path d="M6 48.5h4M6 51.5h4M6 54.5h4" stroke="#1e1a16" stroke-width=".7"/>
@@ -283,7 +311,7 @@ const LONGLAYOUT = {   // swords stand upright side by side, clubs lean alternat
 };
 function pip(s, cx, cy, size, rot = 0) {
   const h = size, w = LONG[s] ? size * LONG[s] : size;
-  return `<use href="#pip-${s === 'd' && size < 40 ? 'ds' : s}" x="${cx - w / 2}" y="${cy - h / 2}" width="${w}" height="${h}"${rot ? ` transform="rotate(${rot} ${cx} ${cy})"` : ''}/>`;
+  return `<use href="#pip-${(s === 'd' || s === 'c') && size < 40 ? s + 's' : s}" x="${cx - w / 2}" y="${cy - h / 2}" width="${w}" height="${h}"${rot ? ` transform="rotate(${rot} ${cx} ${cy})"` : ''}/>`;
 }
 const FIGCOL = { d:[BL, R], c:[R, G], s:[G, R], b:[R, BL] };
 const head = (cy, beard) => `
@@ -339,7 +367,7 @@ function faceSVG(id) {
   const r = rank(id), s = suit(id);
   let body;
   if (FIG[r]) body = figureSVG(r, s);
-  else if (r === 1 && s === 'd') body = pip('d', 50, 80, 82);
+  else if (r === 1 && (s === 'd' || s === 'c')) body = pip(s, 50, 80, 82);
   else if (r === 1) body = `<circle cx="50" cy="80" r="38" fill="none" stroke="${SC[s]}" stroke-width="1" opacity=".35"/><circle cx="50" cy="80" r="34" fill="none" stroke="${SC[s]}" stroke-width=".6" opacity=".35"/>
       <path d="M22 108q-6-12 2-22M78 108q6-12-2-22M22 52q-6 12 2 22M78 52q6 12-2 22" stroke="${G}" stroke-width="2" fill="none" opacity=".75"/>
       ${LONG[s] ? pip(s, 50, 80, 112, s === 'b' ? 12 : 0) : pip(s, 50, 80, s === 'd' ? 0 : 58)}`;
@@ -347,7 +375,7 @@ function faceSVG(id) {
     const len = r <= 3 ? (s === 'b' ? 88 : 96) : 60;
     body = LONGLAYOUT[r].map(([x, y], i) => pip(s, x, y, len, s === 'b' ? (i % 2 ? 14 : -14) : 0)).join('');
   }
-  else body = LAYOUT[r].map(([x, y]) => pip(s, x, y, s === 'd' ? (r >= 6 ? 27 : 30) : (r >= 6 ? 24 : 27))).join('');
+  else body = LAYOUT[r].map(([x, y]) => pip(s, x, y, s === 'd' || s === 'c' ? (r >= 6 ? 27 : 30) : (r >= 6 ? 24 : 27))).join('');
   return `<svg class="face" viewBox="0 0 100 160" aria-hidden="true">${body}</svg>`;
 }
 const cardInner = id => `${faceSVG(id)}<span class="rk">${rank(id)}</span><span class="rk b">${rank(id)}</span>`;
@@ -700,7 +728,7 @@ function probeOnce() {
 
 // ================= Players & win history =================
 // Each phone keeps the list of finished matches; phones merge their lists whenever they play together.
-const VERSION = 15;
+const VERSION = 16;
 const NAMES = ['Maurizio', 'Giancarlo', 'Ospite 1', 'Ospite 2'];
 const REGULARS = ['Maurizio', 'Giancarlo'];
 const allowedNames = n => NAMES.slice(0, Math.max(2, n));   // 2: Maurizio e Giancarlo · 3: + Ospite 1 · 4: + Ospite 2
