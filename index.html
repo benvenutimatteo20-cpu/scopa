@@ -313,15 +313,26 @@ function bastoneSVG(simple) {
       : `<g fill="none" stroke="#8a1d14" stroke-width=".35" transform="rotate(-12 9.1 6.5)"><ellipse cx="9.1" cy="6.5" rx="4.4" ry="2.4"/><ellipse cx="9.1" cy="6.5" rx="2.8" ry="1.5"/><ellipse cx="9.1" cy="6.5" rx="1.2" ry=".6"/></g>`}
     <ellipse cx="9.6" cy="60.1" rx="2.95" ry="1.6" transform="rotate(-10 9.6 60.1)" fill="${Rc}" ${k} stroke-width="${w}"/></g>`;
 }
+// Spada: steel blade with fuller, yellow curled cross-guard, red grip bound in gold, round pommel.
+function spadaSVG(simple) {
+  const k = 'stroke="#1a1714"', w = simple ? 1 : .6, Yc = '#f3cf3c', Rc = '#d23a2b';
+  return `
+    <path d="M8 .6L11.3 7v34.6H4.7V7z" fill="#d6e0ec" ${k} stroke-width="${w}"/>
+    ${simple ? '<path d="M8 6v34" stroke="#7f95b3" stroke-width="1.1"/>' : '<path d="M8 6.5v34.5" stroke="#6f86a6" stroke-width=".9"/><path d="M5.9 8v32" stroke="#fff" stroke-width=".7" opacity=".9"/><path d="M10.2 9v31" stroke="#9fb0c6" stroke-width=".5"/>'}
+    <path d="M1.6 41.2q-1.8 1.6-.4 3.4q1.6 1.2 2.8-.4h8q1.2 1.6 2.8.4q1.4-1.8-.4-3.4z" fill="${Yc}" ${k} stroke-width="${w}"/>
+    ${simple ? '' : '<circle cx="1.9" cy="42.9" r=".6" fill="#b8862c"/><circle cx="14.1" cy="42.9" r=".6" fill="#b8862c"/>'}
+    <rect x="5.9" y="44.6" width="4.2" height="11.8" rx=".6" fill="${Rc}" ${k} stroke-width="${w}"/>
+    <path d="M6 47.4l4 1.6M6 50.6l4 1.6M6 53.8l4 1.6" stroke="${Yc}" stroke-width="${simple ? 1 : .8}"/>
+    <circle cx="8" cy="59.6" r="${simple ? 3.3 : 3}" fill="${Yc}" ${k} stroke-width="${w}"/>
+    <circle cx="8" cy="59.6" r="1.1" fill="${Rc}"/>`;
+}
 const PIPS = {   // [viewBox, markup]
   d: ['0 0 40 40', denaroSVG(false)],
   ds: ['0 0 40 40', denaroSVG(true)],
   c: ['0 0 40 40', coppaSVG(false)],
   cs: ['0 0 40 40', coppaSVG(true)],
-  s: ['0 0 16 64', `<path d="M8 .8l3.1 6.2V42H4.9V7z" fill="#e7edf4" ${K}/><path d="M8 7v34" stroke="#9fb0c6" stroke-width="1"/>
-      <rect x=".8" y="41.6" width="14.4" height="3.8" rx="1.9" fill="${Y}" ${K}/>
-      <rect x="5.9" y="45.4" width="4.2" height="12.4" fill="${R}" ${K}/><path d="M6 48.5h4M6 51.5h4M6 54.5h4" stroke="#1e1a16" stroke-width=".7"/>
-      <circle cx="8" cy="60.4" r="3" fill="${Y}" ${K}/>`],
+  s: ['0 0 16 64', spadaSVG(false)],
+  ss: ['0 0 16 64', spadaSVG(true)],
   b: ['0 0 18 64', bastoneSVG(false)],
   bs: ['0 0 18 64', bastoneSVG(true)]
 };
@@ -339,57 +350,79 @@ const LONGLAYOUT = {   // swords stand upright side by side, clubs lean alternat
 };
 function pip(s, cx, cy, size, rot = 0) {
   const h = size, w = LONG[s] ? size * LONG[s] : size;
-  return `<use href="#pip-${((s === 'd' || s === 'c') && size < 40) || (s === 'b' && size < 70) ? s + 's' : s}" x="${cx - w / 2}" y="${cy - h / 2}" width="${w}" height="${h}"${rot ? ` transform="rotate(${rot} ${cx} ${cy})"` : ''}/>`;
+  return `<use href="#pip-${((s === 'd' || s === 'c') && size < 40) || ((s === 'b' || s === 's') && size < 70) ? s + 's' : s}" x="${cx - w / 2}" y="${cy - h / 2}" width="${w}" height="${h}"${rot ? ` transform="rotate(${rot} ${cx} ${cy})"` : ''}/>`;
 }
 const FIGCOL = { d:[BL, R], c:[R, G], s:[G, R], b:[R, BL] };
-const head = (cy, beard) => `
-  <circle cx="50" cy="${cy}" r="8.6" fill="${SKIN}" ${K}/>
-  <circle cx="47" cy="${cy - .5}" r=".95" fill="#1e1a16"/><circle cx="53" cy="${cy - .5}" r=".95" fill="#1e1a16"/>
-  <path d="M50 ${cy}v2.6" stroke="#b07a55" stroke-width=".9"/>
-  ${beard ? `<path d="M42.5 ${cy + 2}q7.5 15 15 0q-3 3-7.5 3t-7.5-3z" fill="#d9d4cb" ${K}/>` : `<path d="M47.6 ${cy + 4.6}q2.4 1.6 4.8 0" stroke="#8a3a2a" stroke-width="1" fill="none"/>`}`;
+const ruff = cy => { let d = ''; for (let i = 0; i <= 16; i++) { const a = Math.PI * (i / 16), r = i % 2 ? 6.2 : 8.6; d += (i ? 'L' : 'M') + (50 - Math.cos(a) * r).toFixed(1) + ' ' + (cy + Math.sin(a) * r * .55).toFixed(1); } return `<path d="${d}Z" fill="#fbf8f2" ${K}/>`; };
+const head = (cy, o = {}) => `
+  ${o.hair ? `<path d="M40.8 ${cy + 3}q-1.6-14 9.2-14.6t9.2 14.6q-1.6-6-3.4-7.4q-5.8 2.4-11.6 0q-1.8 1.4-3.4 7.4z" fill="${o.hair}" ${K}/>` : ''}
+  <ellipse cx="50" cy="${cy}" rx="8.2" ry="9.2" fill="${SKIN}" ${K}/>
+  <circle cx="45.4" cy="${cy + 2.8}" r="1.7" fill="#e58f74" opacity=".5"/><circle cx="54.6" cy="${cy + 2.8}" r="1.7" fill="#e58f74" opacity=".5"/>
+  <path d="M44.4 ${cy - 3.4}q1.9-1.3 3.6 0M52 ${cy - 3.4}q1.9-1.3 3.6 0" stroke="${o.brow || '#4a3020'}" stroke-width=".9" fill="none" stroke-linecap="round"/>
+  <ellipse cx="46.3" cy="${cy - 1}" rx="1.35" ry=".9" fill="#fff" stroke="#1e1a16" stroke-width=".4"/><ellipse cx="53.7" cy="${cy - 1}" rx="1.35" ry=".9" fill="#fff" stroke="#1e1a16" stroke-width=".4"/>
+  <circle cx="46.5" cy="${cy - 1}" r=".55" fill="#1e1a16"/><circle cx="53.5" cy="${cy - 1}" r=".55" fill="#1e1a16"/>
+  <path d="M50 ${cy - .4}q-1.4 3.4.3 3.9" stroke="#a8684a" stroke-width=".8" fill="none"/>
+  ${o.beard ? `<path d="M41.9 ${cy + .6}q.8 12.6 8.1 14.8q7.3-2.2 8.1-14.8q-1.9 4.2-4 4.8q-2-1.7-4.1-1.7t-4.1 1.7q-2.1-.6-4-4.8z" fill="${o.beard}" ${K}/><path d="M45.6 ${cy + 4.6}q4.4-2.4 8.8 0" stroke="#1e1a16" stroke-width=".5" fill="${o.beard}"/>`
+    : `<path d="M47.4 ${cy + 4.7}q2.6 1.7 5.2 0" stroke="#9a3a2a" stroke-width=".95" fill="none" stroke-linecap="round"/>`}`;
+const shadow = `<ellipse cx="50" cy="145.5" rx="26" ry="3.6" fill="#1e1a16" opacity=".13"/>`;
 function figureSVG(r, s) {
-  const [A, B] = FIGCOL[s];
-  if (r === 8) return `
-    <path d="M42 106h7v32h-7zM51 106h7v32h-7z" fill="${B}" ${K}/>
-    <path d="M37.5 138h11.5v5h-13zM51 138h11.5l2 5H51z" fill="#1e1a16"/>
-    <path d="M37 60q13-6 26 0l5 50H32z" fill="${A}" ${K}/>
-    <path d="M50 57.2q7 .2 13 2.8l5 50H50z" fill="${B}" ${K}/>
-    <path d="M32.6 104h34.8" stroke="${Y}" stroke-width="3"/><rect x="34" y="83" width="32" height="4" fill="${Y}" ${K}/>
-    <path d="M38 62q-10 9-5 24l5-1q-3-10 3-17z" fill="${B}" ${K}/>
-    <path d="M62 62q10 4 12 16l-5 2q-2-8-9-11z" fill="${A}" ${K}/><circle cx="71.5" cy="80" r="2.8" fill="${SKIN}" ${K}/>
-    <path d="M43 58q7 7 14 0" fill="#fff" ${K}/>
-    <path d="M41.2 47q0-11 8.8-11t8.8 11q-2.6-5-8.8-5t-8.8 5z" fill="#6b3d1e"/>
-    ${head(46, false)}
-    <path d="M38.5 41q11.5-14 23 0q-11.5-4-23 0z" fill="${A}" ${K}/>
-    <path d="M58 36q9-12 16-8q-8 2-13 11z" fill="${Y}" ${K}/>
-    ${pip(s, 74, 95, s === 's' || s === 'b' ? 40 : 24, s === 's' || s === 'b' ? 20 : 0)}`;
-  if (r === 9) return `
-    <path d="M21 96q-13 8-9 28q4-14 12-20z" fill="#6b3d1e"/>
-    <path d="M26 106l-3 34h5l4-32zM35 108l-1 32h5l2-32zM70 108l1 32h5l-1-32zM78 104l4 36h5l-4-38z" fill="#efe9dc" ${K}/>
-    <path d="M22 140h7M33 140h7M70 140h7M81 140h7" stroke="#1e1a16" stroke-width="3"/>
-    <path d="M20 100q2-16 22-16h28q12 0 14 12l-2 12q-22 4-58 0z" fill="#efe9dc" ${K}/>
-    <path d="M70 86l8-24q4-6 12-2l4 10q-2 4-6 2l-4-2-4 22z" fill="#efe9dc" ${K}/>
-    <path d="M76 64q-4 12-4 22" stroke="#6b3d1e" stroke-width="3" fill="none"/><circle cx="87" cy="64" r="1.2" fill="#1e1a16"/>
-    <path d="M80 66l12 4M84 62l-2 12" stroke="${A}" stroke-width="1.7"/>
-    <path d="M38 84h28l-2 22H40z" fill="${A}" ${K}/><path d="M40 106h24" stroke="${Y}" stroke-width="3" stroke-dasharray="2 1.5"/>
-    <path d="M48 84l-2 22h6l2-22z" fill="${B}" ${K}/><path d="M45 104h8v5h-9z" fill="#1e1a16"/>
-    <path d="M42 58q8-4 16 0l2 28H40z" fill="${B}" ${K}/><rect x="40.5" y="76" width="19" height="3.4" fill="${Y}" ${K}/>
-    <path d="M42 62q-10-4-14-14l5-2q3 8 12 12z" fill="${B}" ${K}/><circle cx="29.5" cy="46" r="2.8" fill="${SKIN}" ${K}/>
-    ${head(47, false)}
-    <path d="M37 43h26l-3.4-3.4q-9.6-11-19.2 0z" fill="#1e1a16"/>
-    ${pip(s, 26, 34, s === 's' || s === 'b' ? 36 : 22, s === 's' || s === 'b' ? -15 : 0)}`;
-  return `
-    <path d="M34 60l-12 80h8l10-76zM66 60l12 80h-8l-10-76z" fill="${B}" ${K}/>
-    <path d="M36 60q14-6 28 0l10 80H26z" fill="${A}" ${K}/>
-    <path d="M46 60h8v80h-8z" fill="#fbf8f2" ${K}/>
-    <g fill="#1e1a16"><path d="M49 70h2v3h-2zM49 86h2v3h-2zM49 102h2v3h-2zM49 118h2v3h-2z"/></g>
-    <path d="M26 140h48" stroke="${Y}" stroke-width="4"/>
-    <path d="M38 60q12 10 24 0q-12 4-24 0z" fill="#fbf8f2" ${K}/>
-    <path d="M38 64q-8 8-8 24h5q0-12 7-18z" fill="${A}" ${K}/><path d="M32 64l-4 56" stroke="${Y}" stroke-width="3"/><circle cx="32.4" cy="62" r="3.6" fill="${Y}" ${K}/><circle cx="31" cy="88" r="2.8" fill="${SKIN}" ${K}/>
-    <path d="M62 64q10 6 10 20l-6 1q-1-11-8-15z" fill="${A}" ${K}/><circle cx="69" cy="86" r="2.8" fill="${SKIN}" ${K}/>
-    ${head(46, true)}
-    <path d="M40 40l1-12 5 6 4-8 4 8 5-6 1 12z" fill="${Y}" ${K}/><circle cx="50" cy="31.5" r="1.6" fill="${R}"/><circle cx="44.5" cy="36" r="1.2" fill="${BL}"/><circle cx="55.5" cy="36" r="1.2" fill="${BL}"/>
-    ${pip(s, 72, 100, s === 's' || s === 'b' ? 42 : 26, s === 's' || s === 'b' ? 15 : 0)}`;
+  const [A, B] = FIGCOL[s], long = s === 's' || s === 'b';
+  if (r === 8) return `${shadow}
+    <path d="M42.6 106h6.6l-.6 35h-5.4zM51 106h6.6l.4 35h-5.6z" fill="${B}" ${K}/><path d="M51 106h6.6l.4 35h-5.6z" fill="${A}" ${K}/>
+    <path d="M42.7 123h6.2M51.1 123h6.5" stroke="${Y}" stroke-width="2.2"/>
+    <path d="M36.8 141h11.6v4.6H35.2q-.6-3 1.6-4.6zM51.2 141h11.6q2.2 1.6 1.6 4.6H51.2z" fill="#1e1a16"/>
+    <path d="M37.5 60q12.5-5 25 0l6 49q-18.5 5-37 0z" fill="${A}" ${K}/>
+    <path d="M50 57.6q6.6.4 12.5 2.4l6 49q-9.2 2.6-18.5 2.6z" fill="${B}" ${K}/>
+    <path d="M50 58v53" stroke="${Y}" stroke-width="2.6"/><g fill="#fbf8f2" ${K} stroke-width=".5"><circle cx="50" cy="67" r="1.1"/><circle cx="50" cy="75" r="1.1"/><circle cx="50" cy="96" r="1.1"/></g>
+    <path d="M31.8 108.6q18.2 5 36.4 0" stroke="${Y}" stroke-width="2.8" fill="none"/>
+    <path d="M34.6 83q15.4 3 30.8 0l.5 4.4q-15.9 3-31.8 0z" fill="${Y}" ${K}/><rect x="47.6" y="83.6" width="4.8" height="4.4" rx=".6" fill="none" ${K} stroke-width=".8"/>
+    <path d="M38 61q-9 2-9.6 12l-1 12q2 3 5 1l1.5-10q2-6 6-8z" fill="${B}" ${K}/><path d="M30.6 67l3.4 2.6M29.8 73.6l3.6 2" stroke="${Y}" stroke-width="1.3"/>
+    <circle cx="32.4" cy="87.4" r="2.7" fill="${SKIN}" ${K}/>
+    <path d="M62 61q9 2 11 11l2 10q-2.5 2-5 .5l-2-9q-2-5-6.5-6.5z" fill="${A}" ${K}/><path d="M66.6 64.6l2 3.4M69.8 70l1.6 3.4" stroke="${Y}" stroke-width="1.3"/>
+    <circle cx="72.6" cy="84.4" r="2.7" fill="${SKIN}" ${K}/>
+    ${ruff(57.6)}
+    ${head(47, { hair: '#7a4a24' })}
+    <path d="M39.4 41.2q2-9.6 10.6-9.6t10.6 9.6q-10.6 2.4-21.2 0z" fill="${B}" ${K}/><path d="M39.6 40.8q10.4 2.8 20.8 0" stroke="${Y}" stroke-width="1.7" fill="none"/>
+    <path d="M57 34.4q10-12.4 18.4-9.2q-7.4 1.6-12.2 7.2q4.2-1 7.2 0q-6.2 2-10.8 5z" fill="#fbf8f2" ${K}/><path d="M60 33q6-6 12-7" stroke="${R}" stroke-width=".9" fill="none"/>
+    ${pip(s, 75, 99, long ? 46 : 30, long ? 18 : 0)}`;
+  if (r === 9) return `${shadow}
+    <path d="M20.5 94q-12.5 4-10.5 22q3 6 1 12q8-6 8-16q0-8 4.5-12z" fill="#6b3d1e" ${K}/>
+    <path d="M26 104l-4 34h5.6l5-30zM36 108l-1 30h5.6l2-30zM68 108l1 30h5.6l-.6-30zM77 104l5 34h5.6l-4-36z" fill="#f2ece0" ${K}/>
+    <path d="M21.6 138h6.4v4h-6.6zM34.8 138h6.2v4h-6.4zM68.8 138h6.2v4h-6.4zM81.8 138h6.4v4h-6.6z" fill="#1e1a16"/>
+    <path d="M19 98q1-15.4 21-16h29q14 0 16 12l-1 12q-4 6-12 6H40q-11-1-21-14z" fill="#f2ece0" ${K}/>
+    <path d="M28 109q20 4.4 44 0" stroke="#cfc6b4" stroke-width="2.2" fill="none"/>
+    <path d="M68 86l6-22q3-8 11-7l8 9q2 3-1 5l-3 1q-2 0-4-2l-3-1-3 20z" fill="#f2ece0" ${K}/>
+    <path d="M73.4 62.6q-6.4 8.4-6.4 22.4q3-3 3-6q2 2 3-1q2 1 2.2-3.4z" fill="#6b3d1e" ${K}/>
+    <path d="M79.6 57.6l1.2-5.4 2.8 5.4z" fill="#f2ece0" ${K}/><circle cx="85.4" cy="63" r="1.3" fill="#1e1a16"/><circle cx="91.4" cy="69" r=".8" fill="#1e1a16"/>
+    <path d="M77 60l14.4 8M81 59l-1 12M90.4 68.4l-6 4" stroke="${A}" stroke-width="1.7" fill="none"/><path d="M84.6 71q-12 6-26.6 2" stroke="#6b3d1e" stroke-width="1.1" fill="none"/>
+    <path d="M37 84h30l-3 24H40z" fill="${A}" ${K}/><path d="M39.8 88h24.4l-2.4 17H42.2z" fill="none" stroke="${Y}" stroke-width="1.1"/>
+    <path d="M40 108h24" stroke="${Y}" stroke-width="3" stroke-dasharray="1.6 1.2"/>
+    <path d="M47 84l-2 22h6l2-22z" fill="${B}" ${K}/><path d="M44.4 102.4H52l.6 7H42.6z" fill="#1e1a16"/><path d="M44 110.6h7" stroke="${Y}" stroke-width="1.6"/>
+    <path d="M41.5 58q8.5-4 17 0l2 28h-21z" fill="${B}" ${K}/><path d="M50 56v30" stroke="${Y}" stroke-width="2.2"/>
+    <rect x="39.8" y="76" width="20.6" height="3.6" fill="${Y}" ${K}/>
+    <path d="M58 62q6.4 6 4 14l-4-1q1-6-3-9z" fill="${B}" ${K}/>
+    <path d="M42 62q-9-3-13-13l5-2.6q3 7 10 10z" fill="${B}" ${K}/><circle cx="30.4" cy="47.4" r="2.7" fill="${SKIN}" ${K}/>
+    ${ruff(57.6)}
+    ${head(48, { hair: '#4a2c14' })}
+    <path d="M35.6 44.4q14.4-4.4 28.8 0l-3-3q-3-10.4-11.4-10.4t-11.4 10.4z" fill="#1e1a16"/><path d="M58 33q7-4 11 0q-5-.4-8.4 3z" fill="${A}" ${K}/>
+    ${pip(s, 24, 35, long ? 40 : 24, long ? -16 : 0)}`;
+  return `${shadow}
+    <path d="M33 60l-12 82h58l-12-82z" fill="${B}" ${K}/>
+    <path d="M37 60q13-5 26 0l8 82H29z" fill="${A}" ${K}/>
+    <g fill="${Y}" opacity=".85"><circle cx="38" cy="96" r="1.2"/><circle cx="41" cy="118" r="1.2"/><circle cx="36" cy="132" r="1.2"/><circle cx="62" cy="96" r="1.2"/><circle cx="59" cy="118" r="1.2"/><circle cx="64" cy="132" r="1.2"/></g>
+    <path d="M46.5 60h7v82h-7z" fill="#fbf8f2" ${K}/>
+    <g fill="#1e1a16"><path d="M49.2 72h1.6l-.8 3zM49.2 90h1.6l-.8 3zM49.2 108h1.6l-.8 3zM49.2 126h1.6l-.8 3z"/></g>
+    <path d="M28.6 141h42.8" stroke="${Y}" stroke-width="4"/>
+    <path d="M35 60q15 15 30 0q-4 9-15 10q-11-1-15-10z" fill="#fbf8f2" ${K}/><g fill="#1e1a16"><path d="M40 64h1.4l-.7 2.4zM45 67h1.4l-.7 2.4zM53.6 67H55l-.7 2.4zM58.6 64H60l-.7 2.4z"/></g>
+    <path d="M37 64q-8 8-8 24h6q0-12 6-18z" fill="${A}" ${K}/>
+    <path d="M31.6 64l-4.2 58" stroke="${Y}" stroke-width="3.2"/><path d="M31.8 58.4l-2.6 3.6 2.4 1.6 2.6-3.4z" fill="${Y}" ${K}/><circle cx="31.4" cy="57" r="2.4" fill="${R}" ${K}/>
+    <circle cx="32" cy="88.4" r="2.8" fill="${SKIN}" ${K}/>
+    <path d="M63 64q9 6 10 20l-6 1q-1-11-8-15z" fill="${A}" ${K}/><circle cx="70" cy="86.4" r="2.8" fill="${SKIN}" ${K}/>
+    ${head(45, { hair: '#d9d4cb', beard: '#e8e2d6', brow: '#8a8478' })}
+    <path d="M40.4 37.4l-1.2-12.6 5.4 5.2 2.8-8.4 2.6 8.4 2.6-8.4 2.8 8.4 5.4-5.2-1.2 12.6z" fill="${Y}" ${K}/>
+    <rect x="40.2" y="35.4" width="19.6" height="3.4" fill="${Y}" ${K}/><circle cx="45" cy="37.1" r=".9" fill="${R}"/><circle cx="50" cy="37.1" r=".9" fill="${BL}"/><circle cx="55" cy="37.1" r=".9" fill="${G}"/>
+    <circle cx="39.2" cy="24.8" r="1.1" fill="${Y}" ${K}/><circle cx="47.4" cy="21.6" r="1.1" fill="${Y}" ${K}/><circle cx="52.6" cy="21.6" r="1.1" fill="${Y}" ${K}/><circle cx="60.8" cy="24.8" r="1.1" fill="${Y}" ${K}/>
+    ${pip(s, 72, 101, long ? 48 : 31, long ? 15 : 0)}`;
 }
 function faceSVG(id) {
   const r = rank(id), s = suit(id);
@@ -397,6 +430,7 @@ function faceSVG(id) {
   if (FIG[r]) body = figureSVG(r, s);
   else if (r === 1 && (s === 'd' || s === 'c')) body = pip(s, 50, 80, 82);
   else if (r === 1 && s === 'b') body = pip('b', 50, 80, 128, 14);
+  else if (r === 1 && s === 's') body = pip('s', 50, 80, 132);
   else if (r === 1) body = `<circle cx="50" cy="80" r="38" fill="none" stroke="${SC[s]}" stroke-width="1" opacity=".35"/><circle cx="50" cy="80" r="34" fill="none" stroke="${SC[s]}" stroke-width=".6" opacity=".35"/>
       <path d="M22 108q-6-12 2-22M78 108q6-12-2-22M22 52q-6 12 2 22M78 52q6 12-2 22" stroke="${G}" stroke-width="2" fill="none" opacity=".75"/>
       ${LONG[s] ? pip(s, 50, 80, 112, s === 'b' ? 12 : 0) : pip(s, 50, 80, s === 'd' ? 0 : 58)}`;
@@ -770,7 +804,7 @@ function probeOnce() {
 
 // ================= Players & win history =================
 // Each phone keeps the list of finished matches; phones merge their lists whenever they play together.
-const VERSION = 19;
+const VERSION = 20;
 const NAMES = ['Maurizio', 'Giancarlo', 'Ospite 1', 'Ospite 2'];
 const REGULARS = ['Maurizio', 'Giancarlo'];
 const allowedNames = n => NAMES.slice(0, Math.max(2, n));   // 2: Maurizio e Giancarlo · 3: + Ospite 1 · 4: + Ospite 2
