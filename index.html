@@ -672,18 +672,20 @@ function probeOnce() {
 
 // ================= Players & win history =================
 // Each phone keeps the list of finished matches; phones merge their lists whenever they play together.
-const VERSION = 13;
+const VERSION = 14;
 const NAMES = ['Maurizio', 'Giancarlo', 'Ospite 1', 'Ospite 2'];
 const REGULARS = ['Maurizio', 'Giancarlo'];
 const allowedNames = n => NAMES.slice(0, Math.max(2, n));   // 2: Maurizio e Giancarlo · 3: + Ospite 1 · 4: + Ospite 2
 const myName = () => NAMES.includes(lsGet('scopa.nick')) ? lsGet('scopa.nick') : NAMES[0];
-function loadHist() { try { const h = JSON.parse(lsGet('scopa.hist') || '[]'); return Array.isArray(h) ? h : []; } catch { return []; } }
+// Raising HIST_EPOCH resets the win counter on every phone: older matches are ignored even if another phone sends them.
+const HIST_EPOCH = 1;   // 1 = azzerato il 10/11/2026
+function loadHist() { try { const h = JSON.parse(lsGet('scopa.hist') || '[]'); return Array.isArray(h) ? h.filter(m => m && m.ep === HIST_EPOCH) : []; } catch { return []; } }
 function mergeHist(extra) {
   if (!Array.isArray(extra) || !extra.length) return false;
   const h = loadHist(), ids = new Set(h.map(x => x.id)); let added = false;
   for (const m of extra) {
-    if (!m || typeof m.id !== 'string' || ids.has(m.id) || !GAMES[m.game] || !Array.isArray(m.winners)) continue;
-    h.push({ id: m.id.slice(0, 40), game: m.game, at: +m.at || 0, players: (m.players || []).map(String).slice(0, 4), winners: m.winners.map(String).slice(0, 2) });
+    if (!m || m.ep !== HIST_EPOCH || typeof m.id !== 'string' || ids.has(m.id) || !GAMES[m.game] || !Array.isArray(m.winners)) continue;
+    h.push({ ep: HIST_EPOCH, id: m.id.slice(0, 40), game: m.game, at: +m.at || 0, players: (m.players || []).map(String).slice(0, 4), winners: m.winners.map(String).slice(0, 2) });
     ids.add(m.id); added = true;
   }
   if (added) lsSet('scopa.hist', JSON.stringify(h.sort((a, b) => a.at - b.at).slice(-500)));
@@ -692,7 +694,7 @@ function mergeHist(extra) {
 function recordIfOver(s) {
   if (s.status !== 'over' || !s.matchId || s.winner < 0) return;
   const winners = s.players.filter(p => teamOf(s, p.seat) === s.winner).map(p => p.nick);
-  mergeHist([{ id: s.matchId, game: s.game, at: Date.now(), players: s.players.map(p => p.nick), winners }]);
+  mergeHist([{ ep: HIST_EPOCH, id: s.matchId, game: s.game, at: Date.now(), players: s.players.map(p => p.nick), winners }]);
 }
 function dashboardHTML() {
   const h = loadHist();
