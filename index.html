@@ -684,16 +684,34 @@ const inviteLink = () => location.origin + location.pathname;
 const AV = ['#e6b450', '#e98a6b', '#8fc7e8', '#a9d98b'];
 const avatar = (nick, seat) => `<span class="avatar" style="--av:${AV[seat % 4]}">${esc((nick || '?').trim().charAt(0).toUpperCase())}</span>`;
 async function keepAwake() { try { await navigator.wakeLock?.request('screen'); } catch {} }
+// A phone that sleeps or switches app silently loses its link to the broker. peerHealthy() nudges it back and,
+// if it stays broken for 10 s, throws it away so the caller builds a fresh one.
+function peerHealthy(p) {
+  if (!p || p.destroyed) return false;
+  if (p.open) { p._bad = 0; return true; }
+  if (!p._bad) p._bad = Date.now();
+  if (p.disconnected) { try { p.reconnect(); } catch {} }
+  if (Date.now() - p._bad > 10000) { try { p.destroy(); } catch {} return false; }
+  return null;   // still trying
+}
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState !== 'visible' || !role) return;
+  if (document.visibilityState !== 'visible') return;
+  if (!role) { startProbe(); return; }
   keepAwake();
   if (role === 'host') { if (!peer || peer.destroyed) openHostPeer(); else if (peer.disconnected) { try { peer.reconnect(); } catch {} } }
   if (role === 'guest' && (!conn || !conn.open)) guestConnect?.();
 });
 // Phones drop connections silently when the screen sleeps: guests ping the host and reconnect if it goes quiet.
 let guestConnect = null, lastHeard = 0;
+let connStart = 0;
 setInterval(() => {
-  if (role !== 'guest' || !conn) return;
+  if (role === 'host') {   // keep the table reachable
+    if (peerHealthy(peer) === false) openHostPeer();
+    else if (peer && !peer.open && netOk) { netOk = false; render(); }
+    return;
+  }
+  if (role !== 'guest') return;
+  if (!conn || (!conn.open && Date.now() - connStart > 8000)) { guestConnect?.(); return; }
   if (conn.open) { try { conn.send({ t: 'ping' }); } catch {} }
   if (lastHeard && Date.now() - lastHeard > 15000) { lastHeard = Date.now(); netOk = false; render(); try { conn.close(); } catch {} guestConnect?.(); }
 }, 5000);
@@ -827,7 +845,9 @@ function startGuest(c, pw, nick) {
       peer.on('disconnected', () => { try { peer.reconnect(); } catch {} });
       return;
     }
-    if (!peer.open) return;
+    if (!peer.open) { if (peerHealthy(peer) === false) peer = null; retryT = setTimeout(connect, 2500); return; }
+    try { conn?.close(); } catch {}
+    connStart = Date.now();
     conn = peer.connect(peerId(c), { reliable: true });
     conn.on('open', () => { netOk = true; lastHeard = Date.now(); conn.send({ t: 'join', pw, nick, token, hist: loadHist() }); render(); });
     conn.on('data', m => {
@@ -853,12 +873,15 @@ function startProbe() {
   clearTimeout(probeT);
   if (!probe || probe.destroyed) {
     probe = new Peer();
-    probe.on('open', () => probeOnce());
+    probe.on('open', () => { probeOnce(); clearTimeout(probeT); probeT = setTimeout(startProbe, 8000); });
     probe.on('error', e => { if (e.type === 'peer-unavailable') setOnline(false); else { try { probe.destroy(); } catch {} probe = null; } if (!role) probeT = setTimeout(startProbe, 5000); });
     probe.on('disconnected', () => { try { probe.reconnect(); } catch {} });
+    probeT = setTimeout(startProbe, 6000);
     return;
   }
-  if (probe.open) probeOnce();
+  if (probe.open) { probeOnce(); probeT = setTimeout(startProbe, 8000); return; }
+  if (peerHealthy(probe) === false) probe = null;   // stuck after the phone slept: rebuild it
+  probeT = setTimeout(startProbe, 3000);
 }
 function probeOnce() {
   if (role || !probe?.open) return;
@@ -866,12 +889,11 @@ function probeOnce() {
   const to = setTimeout(() => { if (!got) { setOnline(false); try { c.close(); } catch {} } }, 7000);
   c.on('open', () => c.send({ t: 'peek' }));
   c.on('data', m => { if (m?.t === 'info') { got = true; clearTimeout(to); setOnline(m.info); setTimeout(() => { try { c.close(); } catch {} }, 200); } });
-  clearTimeout(probeT); probeT = setTimeout(startProbe, 8000);
 }
 
 // ================= Players & win history =================
 // Each phone keeps the list of finished matches; phones merge their lists whenever they play together.
-const VERSION = 22;
+const VERSION = 23;
 const NAMES = ['Maurizio', 'Giancarlo', 'Ospite 1', 'Ospite 2'];
 const REGULARS = ['Maurizio', 'Giancarlo'];
 const allowedNames = n => NAMES.slice(0, Math.max(2, n));   // 2: Maurizio e Giancarlo · 3: + Ospite 1 · 4: + Ospite 2
@@ -933,7 +955,9 @@ function renderHome() {
     ${resume ? `<div class="panel"><div class="eyebrow">La tua partita è in sospeso</div><h3>${GAMES[resume.S.game || 'scopa'].name} · ${resume.S.players.map(p => esc(p.nick)).join(', ')}</h3><div class="row"><button class="grow" id="resume">Riprendi</button><button class="ghost" id="drop">Chiudila</button></div></div>` : ''}
     <div id="online"></div>
     <form id="create" class="panel" novalidate hidden>
-      <div class="eyebrow">Nessuna partita online</div><h3>Apri un tavolo</h3>
+      <div class="row"><div class="eyebrow grow">Nessuna partita online</div><button type="button" class="ghost mini" id="rescan">Cerca di nuovo</button></div>
+      <p class="muted small">Se un amico sta aprendo il tavolo, aspetta qualche secondo: continuo a cercare da solo.</p>
+      <h3>Oppure apri tu un tavolo</h3>
       <div class="games" id="gsel">
         <button type="button" class="game-tile" data-g="scopa" aria-pressed="${createGame === 'scopa'}"><b>Scopa</b><span>Prendi per somma, fai scopa, conta primiera e settebello.</span></button>
         <button type="button" class="game-tile" data-g="briscola" aria-pressed="${createGame === 'briscola'}"><b>Briscola</b><span>Mani a prese con il seme di briscola. Vince chi fa più di 60.</span></button>
@@ -968,6 +992,7 @@ function renderHome() {
     $('#resume').onclick = () => startHost(TABLE, resume.password, resume.S.players[0].nick, resume.S.game, 0, 0, resume.S);
     $('#drop').onclick = () => { lsDel('scopa.host'); renderHome(); };
   }
+  $('#rescan').onclick = () => { setOnline(null); stopProbe(); startProbe(); };
   onlineKey = JSON.stringify(online);
   renderOnline();
   startProbe();
@@ -1013,7 +1038,7 @@ function renderWait() {
     <div class="panel">
       <div class="eyebrow">${GAMES[s.game].name} · ${targetLabel(s)}</div>
       <h2>Tavolo aperto</h2>
-      ${host ? `<button class="ghost" id="copy">Copia link d'invito</button><p class="muted small">Chi apre il link vede questa partita e mette solo la password.</p>` : ''}
+      ${host ? `<button class="ghost" id="copy">Copia link d'invito</button><p class="muted small">Chi apre il link vede questa partita e mette solo la password. Se esci per mandare il link, al ritorno il tavolo si riapre da solo in pochi secondi.</p>` : ''}
       ${s.nPlayers === 4 ? '<p class="muted small">Si gioca a coppie: 1° e 3° contro 2° e 4°.</p>' : ''}
       <div class="seats">${seats}</div>
       ${host ? `<button id="start" ${full ? '' : 'disabled'}>${full ? 'Distribuisci le carte' : `Aspetto ${missing} giocator${missing === 1 ? 'e' : 'i'}`}</button>` : `<p class="status">${full ? 'Ci siete tutti: ' + esc(s.players[0].nick) + ' sta per distribuire.' : 'Aspettiamo gli altri giocatori…'}</p>`}
