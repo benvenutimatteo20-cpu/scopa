@@ -72,12 +72,12 @@ label{display:flex; flex-direction:column; gap:7px; font-size:.82rem; color:var(
 .bigcode{font-family:var(--display); font-size:3rem; letter-spacing:.2em; color:var(--gold); text-align:center; line-height:1}
 
 /* Cards */
-.card{--w:64px; width:var(--w); height:calc(var(--w)*1.6); flex:none; position:relative; background:linear-gradient(160deg, #fffdf6, var(--card) 60%, #f1e8d2); border:1px solid var(--card-edge); border-radius:calc(var(--w)*.1); color:var(--sc); box-shadow:0 1px 0 rgba(0,0,0,.2), 0 6px 14px rgba(0,0,0,.32); padding:0; min-height:0; font-weight:400; transition:transform .18s ease, box-shadow .18s ease}
-.card::before{content:""; position:absolute; inset:calc(var(--w)*.055); border:1.2px solid var(--sc); border-radius:calc(var(--w)*.065); opacity:.45}
+.card{--w:64px; width:var(--w); height:calc(var(--w)*1.6); flex:none; position:relative; background:#fffdf9; border:1px solid #cfc6b4; border-radius:calc(var(--w)*.1); color:var(--sc); box-shadow:0 1px 0 rgba(0,0,0,.2), 0 6px 14px rgba(0,0,0,.32); padding:0; min-height:0; font-weight:400; transition:transform .18s ease, box-shadow .18s ease}
+.card::before{content:""; position:absolute; inset:calc(var(--w)*.05); border:1px solid #2a2520; border-radius:calc(var(--w)*.05); opacity:.55}
 .card .rk{position:absolute; top:calc(var(--w)*.075); left:calc(var(--w)*.1); font-family:var(--display); font-weight:700; font-size:calc(var(--w)*.24); line-height:1; z-index:1}
 .card .rk.b{top:auto; left:auto; bottom:calc(var(--w)*.075); right:calc(var(--w)*.1); transform:rotate(180deg)}
 .card .face{position:absolute; inset:0; width:100%; height:100%; display:block}
-.card.s-d{--sc:#b07d16} .card.s-c{--sc:#b3262d} .card.s-s{--sc:#22509b} .card.s-b{--sc:#2e6a35}
+.card.s-d{--sc:#a87a0c} .card.s-c{--sc:#b3262d} .card.s-s{--sc:#22509b} .card.s-b{--sc:#2e6a35}
 .back{background:
   radial-gradient(ellipse 34% 26% at 50% 50%, #e6b450 0 38%, transparent 40%),
   radial-gradient(ellipse 40% 31% at 50% 50%, #1d2f5c 0 70%, #e6b450 71% 76%, transparent 78%),
@@ -152,6 +152,13 @@ label{display:flex; flex-direction:column; gap:7px; font-size:.82rem; color:var(
 .flash .arrow{font-size:1.4rem; color:var(--gold); padding:0 4px}
 .flash .ttl{font-family:var(--display); font-size:1.5rem; color:var(--gold)}
 .flash .ttl.big{font-size:2.4rem}
+.tablecards .card{cursor:default}
+.tablecards .card.opt{cursor:pointer}
+.tablecards .card.picked{box-shadow:0 0 0 4px #fff, 0 0 0 7px var(--gold), 0 10px 20px rgba(0,0,0,.45); transform:translateY(-8px)}
+.hint{text-align:center; font-size:.85rem; font-weight:700; color:var(--gold); min-height:0; margin:0}
+.hint:empty{display:none}
+tr.reveal{animation:rowin .4s ease both}
+@keyframes rowin{from{opacity:0; transform:translateX(-10px)}to{opacity:1; transform:none}}
 .flash .quip{font-size:1.1rem; font-weight:800; text-align:center; color:var(--ink); max-width:18em; text-wrap:balance}
 @keyframes flash{0%{opacity:0; transform:scale(.92)}12%{opacity:1; transform:none}80%{opacity:1}100%{opacity:0; transform:translateY(-8px)}}
 
@@ -192,64 +199,115 @@ const cardName = id => (FIG[rank(id)] || rank(id)) + ' di ' + SUITS[suit(id)];
 function fullDeck() { const d = []; for (const s of 'dcsb') for (let r = 1; r <= 10; r++) d.push(s + r); return d; }
 function shuffle(a) { const rnd = new Uint32Array(a.length); crypto.getRandomValues(rnd); for (let i = a.length - 1; i > 0; i--) { const j = rnd[i] % (i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
-// Piacentine-style deck, drawn from scratch: Spanish suits, corner numbers, pips laid out by count, full-length figures.
-const PIPS = {
-  d:'<circle cx="20" cy="20" r="17" fill="#e2b34a" stroke="#8a6414" stroke-width="2"/><circle cx="20" cy="20" r="12" fill="none" stroke="#8a6414" stroke-width="1.4" stroke-dasharray="2 2"/><path d="M20 7l3.2 9.8L33 20l-9.8 3.2L20 33l-3.2-9.8L7 20l9.8-3.2z" fill="#b3262d" stroke="#6e1418" stroke-width=".8"/><circle cx="20" cy="20" r="3" fill="#e2b34a"/>',
-  c:'<path d="M7 5h26c0 11-6 17-13 18C13 22 7 16 7 5z" fill="#c8302f" stroke="#6e1418" stroke-width="1.5"/><path d="M8.5 8.5h23" stroke="#e2b34a" stroke-width="2.4"/><path d="M17 23h6l-1 3h-4z" fill="#e2b34a" stroke="#8a6414" stroke-width=".8"/><rect x="18.2" y="26" width="3.6" height="5" fill="#e2b34a"/><path d="M11 37h18l-4-6H15z" fill="#c8302f" stroke="#6e1418" stroke-width="1.5"/>',
-  s:'<path d="M20 1l3.4 5v22h-6.8V6z" fill="#e6ecf4" stroke="#22509b" stroke-width="1.4"/><path d="M20 6v21" stroke="#9fb3cf" stroke-width="1"/><path d="M8 27.5c4-2 20-2 24 0v3c-4-2-20-2-24 0z" fill="#e2b34a" stroke="#8a6414" stroke-width="1"/><rect x="18" y="30.5" width="4" height="5.5" fill="#22509b"/><circle cx="20" cy="37.4" r="2.4" fill="#e2b34a" stroke="#8a6414" stroke-width=".8"/>',
-  b:'<path d="M15 2.5c4-1.6 9 .3 9.8 4.3l4.6 26c.5 3.2-2 5.4-5 5.4s-5.2-2-5.4-4.3L13.4 8.3c-.5-2.4.4-4.8 1.6-5.8z" fill="#9a6532" stroke="#4e2f12" stroke-width="1.3"/><path d="M14.5 9.5l-3-2M17.8 17l-3.4-1M20 25.5l-3.4.4M23 12l3.2-1.6M25 21l3.4-.6" stroke="#4e2f12" stroke-width="1.6" stroke-linecap="round"/><path d="M17 8c2 2 4 2 6 1M19 16c2 2 4 2 6 1M21 25c2 2 4 2 6 1" stroke="#2e6a35" stroke-width="1.6" fill="none" stroke-linecap="round"/>'
+// Piacentine-style deck, drawn from scratch: white cards, Spanish suits (straight swords, knotted clubs),
+// red/blue/yellow/green palette, corner numbers, pips laid out by count, full-length figures.
+const K = 'stroke="#1e1a16" stroke-width="1.1" stroke-linejoin="round"';
+const Y = '#f2c230', R = '#c62f2a', BL = '#2b5aa8', G = '#2e7d32', SKIN = '#f3d2b0', WOOD = '#9a5a26';
+const PIPS = {   // [viewBox, markup]
+  d: ['0 0 40 40', `<circle cx="20" cy="20" r="18" fill="${Y}" ${K}/><circle cx="20" cy="20" r="14.5" fill="none" stroke="${R}" stroke-width="2.2"/>
+      <circle cx="20" cy="20" r="11" fill="#f8dc6e" ${K}/>
+      <g fill="${G}" ${K}><ellipse cx="20" cy="13.5" rx="2.6" ry="4.6"/><ellipse cx="20" cy="26.5" rx="2.6" ry="4.6"/><ellipse cx="13.5" cy="20" rx="4.6" ry="2.6"/><ellipse cx="26.5" cy="20" rx="4.6" ry="2.6"/></g>
+      <circle cx="20" cy="20" r="3.4" fill="${R}" ${K}/>
+      <g fill="${R}"><circle cx="20" cy="3.6" r="1"/><circle cx="20" cy="36.4" r="1"/><circle cx="3.6" cy="20" r="1"/><circle cx="36.4" cy="20" r="1"/><circle cx="8.4" cy="8.4" r="1"/><circle cx="31.6" cy="31.6" r="1"/><circle cx="31.6" cy="8.4" r="1"/><circle cx="8.4" cy="31.6" r="1"/></g>`],
+  c: ['0 0 40 40', `<path d="M7 4h26c0 10-5.5 16-13 17C12.5 20 7 14 7 4z" fill="${Y}" ${K}/>
+      <path d="M8 7.5h24" stroke="${R}" stroke-width="2.6"/><path d="M10 12.5h20" stroke="${BL}" stroke-width="1.6"/>
+      <rect x="18.3" y="20.5" width="3.4" height="9" fill="${Y}" ${K}/><ellipse cx="20" cy="24.5" rx="4.4" ry="2.4" fill="${BL}" ${K}/>
+      <path d="M10 37h20l-4.5-7.5h-11z" fill="${Y}" ${K}/><path d="M12.5 34.5h15" stroke="${R}" stroke-width="1.6"/>`],
+  s: ['0 0 16 64', `<path d="M8 .8l3.1 6.2V42H4.9V7z" fill="#e7edf4" ${K}/><path d="M8 7v34" stroke="#9fb0c6" stroke-width="1"/>
+      <rect x=".8" y="41.6" width="14.4" height="3.8" rx="1.9" fill="${Y}" ${K}/>
+      <rect x="5.9" y="45.4" width="4.2" height="12.4" fill="${R}" ${K}/><path d="M6 48.5h4M6 51.5h4M6 54.5h4" stroke="#1e1a16" stroke-width=".7"/>
+      <circle cx="8" cy="60.4" r="3" fill="${Y}" ${K}/>`],
+  b: ['0 0 18 64', `<path d="M6.2 62.5C5.3 46 3 22 3.6 9.5 3.9 2.5 14.5 1.6 14.6 9c.3 12.5-2.4 37-3.4 53.5z" fill="${WOOD}" ${K}/>
+      <path d="M5 10.5c2 1.2 5.8 1.2 8.6-.4" stroke="${R}" stroke-width="2.2" fill="none"/>
+      <g fill="#6b3a12" ${K}><ellipse cx="6.2" cy="21" rx="2.1" ry="1.5"/><ellipse cx="12" cy="31" rx="2" ry="1.4"/><ellipse cx="6.8" cy="41" rx="1.9" ry="1.4"/><ellipse cx="11.3" cy="50.5" rx="1.8" ry="1.3"/></g>
+      <path d="M4.3 21c-3.4-2.8-4-6-2.7-7.6 1.6 1 2.9 3.5 2.7 7.6zM13.9 31c3.4-2.6 4-5.8 2.8-7.4-1.6.9-3 3.4-2.8 7.4z" fill="${G}" ${K}/>
+      <path d="M6.6 62.4h4.4" stroke="${Y}" stroke-width="2.4"/>`]
 };
-const SC = {d:'#c08a1e', c:'#b3262d', s:'#22509b', b:'#2e6a35'};
+const LONG = { s: 16 / 64, b: 18 / 64 };   // width/height ratio of the long pips
+const SC = {d:'#a87a0c', c:R, s:BL, b:G};
 const LAYOUT = {
   1:[[50,80]], 2:[[50,42],[50,118]], 3:[[50,34],[50,80],[50,126]],
   4:[[33,42],[67,42],[33,118],[67,118]], 5:[[33,40],[67,40],[50,80],[33,120],[67,120]],
   6:[[33,36],[67,36],[33,80],[67,80],[33,124],[67,124]], 7:[[33,34],[67,34],[50,57],[33,80],[67,80],[33,126],[67,126]]
 };
-const pip = (s, cx, cy, size, flip) => `<use href="#pip-${s}" x="${cx - size / 2}" y="${cy - size / 2}" width="${size}" height="${size}"${flip ? ` transform="rotate(180 ${cx} ${cy})"` : ''}/>`;
-const HEAD = (cy, beard) => `<circle cx="50" cy="${cy}" r="9" fill="#f1cda6" stroke="#3a2a1a" stroke-width="1.2"/><circle cx="46.5" cy="${cy - 1}" r="1" fill="#3a2a1a"/><circle cx="53.5" cy="${cy - 1}" r="1" fill="#3a2a1a"/>${beard ? `<path d="M42 ${cy + 3}q8 14 16 0q-8 4-16 0z" fill="#7a5a3a"/>` : `<path d="M47 ${cy + 4}q3 2 6 0" stroke="#3a2a1a" stroke-width="1" fill="none"/>`}`;
+const LONGLAYOUT = {   // swords stand upright side by side, clubs lean alternately — like the Spanish-suited Piacentine
+  2:[[36,80],[64,80]], 3:[[25,80],[50,80],[75,80]],
+  4:[[36,46],[64,46],[36,114],[64,114]], 5:[[30,46],[50,46],[70,46],[38,114],[62,114]],
+  6:[[30,46],[50,46],[70,46],[30,114],[50,114],[70,114]], 7:[[24,46],[42,46],[60,46],[78,46],[30,114],[50,114],[70,114]]
+};
+function pip(s, cx, cy, size, rot = 0) {
+  const h = size, w = LONG[s] ? size * LONG[s] : size;
+  return `<use href="#pip-${s}" x="${cx - w / 2}" y="${cy - h / 2}" width="${w}" height="${h}"${rot ? ` transform="rotate(${rot} ${cx} ${cy})"` : ''}/>`;
+}
+const FIGCOL = { d:[BL, R], c:[R, G], s:[G, R], b:[R, BL] };
+const head = (cy, beard) => `
+  <circle cx="50" cy="${cy}" r="8.6" fill="${SKIN}" ${K}/>
+  <circle cx="47" cy="${cy - .5}" r=".95" fill="#1e1a16"/><circle cx="53" cy="${cy - .5}" r=".95" fill="#1e1a16"/>
+  <path d="M50 ${cy}v2.6" stroke="#b07a55" stroke-width=".9"/>
+  ${beard ? `<path d="M42.5 ${cy + 2}q7.5 15 15 0q-3 3-7.5 3t-7.5-3z" fill="#d9d4cb" ${K}/>` : `<path d="M47.6 ${cy + 4.6}q2.4 1.6 4.8 0" stroke="#8a3a2a" stroke-width="1" fill="none"/>`}`;
 function figureSVG(r, s) {
-  const col = SC[s], ink = 'stroke="#2a1d10" stroke-width="1.3"';
+  const [A, B] = FIGCOL[s];
   if (r === 8) return `
-    <rect x="41" y="106" width="7" height="30" fill="#3a2a1a"/><rect x="52" y="106" width="7" height="30" fill="#3a2a1a"/>
-    <path d="M38 136h11v5H35zM51 136h11l3 5H51z" fill="#3a2a1a"/>
-    <path d="M37 56h26l7 52H30z" fill="${col}" ${ink}/><path d="M50 56v52" stroke="#e2b34a" stroke-width="2"/>
-    <rect x="31" y="98" width="38" height="5" fill="#e2b34a" ${ink}/>
-    <path d="M37 60l-8 26 5 2 8-22z" fill="${col}" ${ink}/>
-    ${HEAD(44, false)}
-    <path d="M38 41c0-12 24-12 24 0z" fill="#e2b34a" ${ink}/><path d="M58 33c6-6 10-6 13-4-5 0-8 3-11 6z" fill="${col}"/>
-    ${pip(s, 70, 74, 26)}`;
+    <path d="M42 106h7v32h-7zM51 106h7v32h-7z" fill="${B}" ${K}/>
+    <path d="M37.5 138h11.5v5h-13zM51 138h11.5l2 5H51z" fill="#1e1a16"/>
+    <path d="M37 60q13-6 26 0l5 50H32z" fill="${A}" ${K}/>
+    <path d="M50 57.2q7 .2 13 2.8l5 50H50z" fill="${B}" ${K}/>
+    <path d="M32.6 104h34.8" stroke="${Y}" stroke-width="3"/><rect x="34" y="83" width="32" height="4" fill="${Y}" ${K}/>
+    <path d="M38 62q-10 9-5 24l5-1q-3-10 3-17z" fill="${B}" ${K}/>
+    <path d="M62 62q10 4 12 16l-5 2q-2-8-9-11z" fill="${A}" ${K}/><circle cx="71.5" cy="80" r="2.8" fill="${SKIN}" ${K}/>
+    <path d="M43 58q7 7 14 0" fill="#fff" ${K}/>
+    <path d="M41.2 47q0-11 8.8-11t8.8 11q-2.6-5-8.8-5t-8.8 5z" fill="#6b3d1e"/>
+    ${head(46, false)}
+    <path d="M38.5 41q11.5-14 23 0q-11.5-4-23 0z" fill="${A}" ${K}/>
+    <path d="M58 36q9-12 16-8q-8 2-13 11z" fill="${Y}" ${K}/>
+    ${pip(s, 74, 95, s === 's' || s === 'b' ? 40 : 24, s === 's' || s === 'b' ? 20 : 0)}`;
   if (r === 9) return `
-    <path d="M14 104c2-14 16-20 36-20s30 6 34 18l-3 10H18z" fill="#a8743f" ${ink}/>
-    <rect x="22" y="110" width="6" height="30" fill="#a8743f" ${ink}/><rect x="34" y="110" width="6" height="28" fill="#a8743f" ${ink}/><rect x="62" y="110" width="6" height="28" fill="#a8743f" ${ink}/><rect x="74" y="108" width="6" height="32" fill="#a8743f" ${ink}/>
-    <path d="M74 98l8-28c4-4 12-2 14 4l-4 10-6 2-2 14z" fill="#a8743f" ${ink}/><circle cx="88" cy="76" r="1.4" fill="#2a1d10"/><path d="M78 72l6-10" stroke="#5a3a1a" stroke-width="2.5"/>
-    <path d="M14 104c-6 6-8 16-6 22" stroke="#5a3a1a" stroke-width="4" fill="none" stroke-linecap="round"/>
-    <path d="M36 90h28l-4 10H40z" fill="${col}" ${ink}/>
-    <path d="M41 58h18l5 34H36z" fill="${col}" ${ink}/><path d="M50 58v34" stroke="#e2b34a" stroke-width="2"/>
-    ${HEAD(48, false)}
-    <path d="M40 44c0-11 20-11 20 0l4 2H36z" fill="#3a2a1a"/>
-    ${pip(s, 26, 62, 24)}`;
+    <path d="M21 96q-13 8-9 28q4-14 12-20z" fill="#6b3d1e"/>
+    <path d="M26 106l-3 34h5l4-32zM35 108l-1 32h5l2-32zM70 108l1 32h5l-1-32zM78 104l4 36h5l-4-38z" fill="#efe9dc" ${K}/>
+    <path d="M22 140h7M33 140h7M70 140h7M81 140h7" stroke="#1e1a16" stroke-width="3"/>
+    <path d="M20 100q2-16 22-16h28q12 0 14 12l-2 12q-22 4-58 0z" fill="#efe9dc" ${K}/>
+    <path d="M70 86l8-24q4-6 12-2l4 10q-2 4-6 2l-4-2-4 22z" fill="#efe9dc" ${K}/>
+    <path d="M76 64q-4 12-4 22" stroke="#6b3d1e" stroke-width="3" fill="none"/><circle cx="87" cy="64" r="1.2" fill="#1e1a16"/>
+    <path d="M80 66l12 4M84 62l-2 12" stroke="${A}" stroke-width="1.7"/>
+    <path d="M38 84h28l-2 22H40z" fill="${A}" ${K}/><path d="M40 106h24" stroke="${Y}" stroke-width="3" stroke-dasharray="2 1.5"/>
+    <path d="M48 84l-2 22h6l2-22z" fill="${B}" ${K}/><path d="M45 104h8v5h-9z" fill="#1e1a16"/>
+    <path d="M42 58q8-4 16 0l2 28H40z" fill="${B}" ${K}/><rect x="40.5" y="76" width="19" height="3.4" fill="${Y}" ${K}/>
+    <path d="M42 62q-10-4-14-14l5-2q3 8 12 12z" fill="${B}" ${K}/><circle cx="29.5" cy="46" r="2.8" fill="${SKIN}" ${K}/>
+    ${head(47, false)}
+    <path d="M37 43h26l-3.4-3.4q-9.6-11-19.2 0z" fill="#1e1a16"/>
+    ${pip(s, 26, 34, s === 's' || s === 'b' ? 36 : 22, s === 's' || s === 'b' ? -15 : 0)}`;
   return `
-    <path d="M34 58h32l12 82H22z" fill="${col}" ${ink}/>
-    <path d="M47 58h6v82h-6z" fill="#f4ecda" stroke="#2a1d10" stroke-width=".8"/><path d="M49 70v4M51 88v4M49 106v4M51 124v4" stroke="#2a1d10" stroke-width="1.6"/>
-    <path d="M22 140h56" stroke="#e2b34a" stroke-width="4"/>
-    <path d="M34 60l-10 30 6 2 10-26z" fill="${col}" ${ink}/>
-    ${HEAD(46, true)}
-    <path d="M39 38l2-12 5 6 4-9 4 9 5-6 2 12z" fill="#e2b34a" ${ink}/><circle cx="50" cy="30" r="1.6" fill="#b3262d"/>
-    ${pip(s, 70, 76, 28)}`;
+    <path d="M34 60l-12 80h8l10-76zM66 60l12 80h-8l-10-76z" fill="${B}" ${K}/>
+    <path d="M36 60q14-6 28 0l10 80H26z" fill="${A}" ${K}/>
+    <path d="M46 60h8v80h-8z" fill="#fbf8f2" ${K}/>
+    <g fill="#1e1a16"><path d="M49 70h2v3h-2zM49 86h2v3h-2zM49 102h2v3h-2zM49 118h2v3h-2z"/></g>
+    <path d="M26 140h48" stroke="${Y}" stroke-width="4"/>
+    <path d="M38 60q12 10 24 0q-12 4-24 0z" fill="#fbf8f2" ${K}/>
+    <path d="M38 64q-8 8-8 24h5q0-12 7-18z" fill="${A}" ${K}/><path d="M32 64l-4 56" stroke="${Y}" stroke-width="3"/><circle cx="32.4" cy="62" r="3.6" fill="${Y}" ${K}/><circle cx="31" cy="88" r="2.8" fill="${SKIN}" ${K}/>
+    <path d="M62 64q10 6 10 20l-6 1q-1-11-8-15z" fill="${A}" ${K}/><circle cx="69" cy="86" r="2.8" fill="${SKIN}" ${K}/>
+    ${head(46, true)}
+    <path d="M40 40l1-12 5 6 4-8 4 8 5-6 1 12z" fill="${Y}" ${K}/><circle cx="50" cy="31.5" r="1.6" fill="${R}"/><circle cx="44.5" cy="36" r="1.2" fill="${BL}"/><circle cx="55.5" cy="36" r="1.2" fill="${BL}"/>
+    ${pip(s, 72, 100, s === 's' || s === 'b' ? 42 : 26, s === 's' || s === 'b' ? 15 : 0)}`;
 }
 function faceSVG(id) {
   const r = rank(id), s = suit(id);
   let body;
   if (FIG[r]) body = figureSVG(r, s);
-  else if (r === 1) body = `<circle cx="50" cy="80" r="34" fill="none" stroke="${SC[s]}" stroke-width="1" opacity=".35"/>${pip(s, 50, 80, 56)}`;
-  else body = LAYOUT[r].map(([x, y]) => pip(s, x, y, r >= 6 ? 24 : 27, (s === 's' || s === 'b') && y > 80)).join('');
+  else if (r === 1) body = `<circle cx="50" cy="80" r="38" fill="none" stroke="${SC[s]}" stroke-width="1" opacity=".35"/><circle cx="50" cy="80" r="34" fill="none" stroke="${SC[s]}" stroke-width=".6" opacity=".35"/>
+      <path d="M22 108q-6-12 2-22M78 108q6-12-2-22M22 52q-6 12 2 22M78 52q6 12-2 22" stroke="${G}" stroke-width="2" fill="none" opacity=".75"/>
+      ${LONG[s] ? pip(s, 50, 80, 112, s === 'b' ? 12 : 0) : pip(s, 50, 80, 58)}`;
+  else if (LONG[s]) {
+    const len = r <= 3 ? (s === 'b' ? 88 : 96) : 60;
+    body = LONGLAYOUT[r].map(([x, y], i) => pip(s, x, y, len, s === 'b' ? (i % 2 ? 14 : -14) : 0)).join('');
+  }
+  else body = LAYOUT[r].map(([x, y]) => pip(s, x, y, r >= 6 ? 24 : 27)).join('');
   return `<svg class="face" viewBox="0 0 100 160" aria-hidden="true">${body}</svg>`;
 }
-const cardInner = id => `<span class="rk">${rank(id)}</span>${faceSVG(id)}<span class="rk b">${rank(id)}</span>`;
+const cardInner = id => `${faceSVG(id)}<span class="rk">${rank(id)}</span><span class="rk b">${rank(id)}</span>`;
 const cardHTML = (id, cls = '') => `<div class="card s-${suit(id)} ${cls}" role="img" aria-label="${cardName(id)}">${cardInner(id)}</div>`;
 const backHTML = (cls = '') => `<div class="card back ${cls}" aria-hidden="true"></div>`;
-const suitIcon = s => `<svg viewBox="0 0 40 40" aria-hidden="true"><use href="#pip-${s}"/></svg>`;
-document.body.insertAdjacentHTML('afterbegin', `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>${Object.entries(PIPS).map(([k, v]) => `<symbol id="pip-${k}" viewBox="0 0 40 40">${v}</symbol>`).join('')}</defs></svg>`);
+const suitIcon = s => `<svg viewBox="${PIPS[s][0]}" aria-hidden="true"><use href="#pip-${s}"/></svg>`;
+document.body.insertAdjacentHTML('afterbegin', `<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>${Object.entries(PIPS).map(([k, v]) => `<symbol id="pip-${k}" viewBox="${v[0]}">${v[1]}</symbol>`).join('')}</defs></svg>`);
 
 // ================= Shared rules =================
 const GAMES = {
@@ -545,6 +603,7 @@ function act(m) { if (role === 'host') handleAction(0, m); else if (conn && conn
 
 // ================= Players & win history =================
 // Each phone keeps the list of finished matches; phones merge their lists whenever they play together.
+const VERSION = 6;
 const NAMES = ['Maurizio', 'Giancarlo', 'Ospite 1', 'Ospite 2'];
 const REGULARS = ['Maurizio', 'Giancarlo'];
 const allowedNames = n => NAMES.slice(0, Math.max(2, n));   // 2: Maurizio e Giancarlo · 3: + Ospite 1 · 4: + Ospite 2
@@ -576,7 +635,7 @@ function dashboardHTML() {
 
 // ================= Views =================
 const app = $('#app');
-let sel = null, createN = 2, createGame = lsGet('scopa.game') || 'scopa', homeTab = '', homeErr = '', seenSeq = null, flashT = null;
+let sel = null, pick = [], createN = 2, createGame = lsGet('scopa.game') || 'scopa', homeTab = '', homeErr = '', seenSeq = null, flashT = null;
 function setErr(t) { const e = $('#jerr'); if (e) e.textContent = t; else toast(t); }
 function goHome(err = '') {
   if (role === 'host') { clearTimeout(trickT); trickT = null; try { peer?.destroy(); } catch {} peer = null; }
@@ -623,7 +682,8 @@ function renderHome() {
       <p class="err" id="cerr"></p>
       <button type="submit">Apri il tavolo</button>
       <p class="muted small">Tieni il gioco aperto finché giocate: la partita vive sul tuo telefono.</p>
-    </form>`;
+    </form>
+    <p class="muted small" style="text-align:center">Versione ${VERSION}</p>`;
   homeErr = '';
   const nickOk = () => { const n = $('#nick').value; lsSet('scopa.nick', n); return n; };
   $('#nick').onchange = e => lsSet('scopa.nick', e.target.value);
@@ -743,9 +803,10 @@ function renderGame() {
   maybeFlash(s);
   const myTurn = s.status === 'playing' && h.turn === my && !(bris && h.trickDone);
   const myHand = h.hands[my] || [];
-  if (sel && (!myHand.includes(sel) || !myTurn)) sel = null;
+  if (sel && (!myHand.includes(sel) || !myTurn)) { sel = null; pick = []; }
   const opts = !bris && sel ? captureOptions(sel, h.table) : [];
-  const optCards = new Set(opts.length === 1 ? opts[0] : opts.flat());
+  const optCards = new Set(opts.flat());
+  const fitCards = new Set(opts.filter(o => pick.every(x => o.includes(x))).flat());   // what still completes your pick
 
   const chips = [...Array(nTeams(s)).keys()].map(t => `<div class="chip ${t === myTeam ? 'mine' : ''}"><span>${esc(teamName(s, t))}</span><b>${s.scores[t] || 0}</b></div>`).join('');
   const opps = [];
@@ -768,7 +829,7 @@ function renderGame() {
     if (!h.trick.length) felt += `<div class="empty-felt">${h.turn === my ? 'Gioca tu' : ''}</div>`;
   } else {
     const fresh = h.lastMove && !h.lastMove.take.length ? h.lastMove.card : null;
-    felt += h.table.length ? `<div class="tablecards">${h.table.map(c => cardHTML(c, (optCards.has(c) ? 'opt ' : '') + (c === fresh ? 'fresh' : ''))).join('')}</div>` : `<div class="empty-felt">Tavolo vuoto</div>`;
+    felt += h.table.length ? `<div class="tablecards" id="tbl">${h.table.map(c => `<button class="card s-${suit(c)} ${pick.includes(c) ? 'picked ' : fitCards.has(c) ? 'opt ' : ''}${c === fresh ? 'fresh' : ''}" data-t="${c}" ${optCards.has(c) ? '' : 'tabindex="-1"'} aria-label="${cardName(c)}">${cardInner(c)}</button>`).join('')}</div>` : `<div class="empty-felt">Tavolo vuoto</div>`;
     felt += h.deck.length ? `<div class="deck-wrap">${deckPile}</div>` : '';
   }
 
@@ -777,39 +838,36 @@ function renderGame() {
   else if (bris && h.trickDone) status = h.trickWinner === my ? 'Prendi tu' : (n === 4 && teamOf(s, h.trickWinner) === myTeam ? 'Prende il tuo compagno' : 'Prende ' + esc(s.players[h.trickWinner].nick));
   else status = myTurn ? 'Tocca a te' : 'Tocca a ' + esc(s.players[h.turn].nick);
 
-  let actions = '';
-  const lastPlay = !h.deck.length && Object.keys(h.hands).every(k => h.hands[k].length === (+k === my ? 1 : 0));
-  if (myTurn && sel) {
-    if (bris) actions = `<button data-act="play">Gioca ${cardName(sel)}</button>`;
-    else actions = !opts.length ? `<button data-take="">Cala ${cardName(sel)}</button>`
-      : opts.map((o, i) => `<button data-take="${i}">Prendi ${o.map(cardName).join(' + ')}${o.length === h.table.length && !lastPlay ? ' · Scopa!' : ''}</button>`).join('');
-  }
+  const hint = myTurn && sel ? 'Più prese possibili: tocca sul tavolo le carte che vuoi prendere' : '';
 
   app.innerHTML = `
     <div class="topbar"><button class="ghost mini" id="back">← Esci</button><div class="scores">${chips}</div>${connPill()}</div>
     <div class="opps">${opps.join('')}</div>
     <div class="rim"><div class="felt">${felt}</div></div>
     <p class="status ${myTurn ? 'me' : ''}">${status}</p>
-    <div class="actions" id="acts">${actions}</div>
+    <p class="hint">${hint}</p>
     <div class="hand ${myTurn ? '' : 'off'}" id="hand">${myHand.map((c, i) => `<button class="card s-${suit(c)} ${c === sel ? 'sel' : ''}" style="${fanStyle(i, myHand.length)}" data-c="${c}" ${myTurn ? '' : 'disabled'} aria-label="${cardName(c)}">${cardInner(c)}</button>`).join('')}</div>
     ${s.status === 'handEnd' || s.status === 'over' ? resultHTML(s) : ''}`;
   bindExit();
+  // One tap plays the card. Only when several captures are possible do you pick them by tapping table cards.
   $('#hand').onclick = e => {
     const b = e.target.closest('button[data-c]'); if (!b || !myTurn) return;
     const c = b.dataset.c;
-    if (sel === c) {   // second tap plays when there is only one thing to do
-      if (bris) { sel = null; return act({ t: 'play', card: c }); }
-      const o = captureOptions(c, h.table);
-      if (o.length <= 1) { sel = null; return act({ t: 'play', card: c, take: o[0] || [] }); }
-      sel = null;
-    } else sel = c;
-    renderGame();
+    if (bris) return act({ t: 'play', card: c });
+    if (sel === c) { sel = null; pick = []; return renderGame(); }   // tap again to cancel the choice
+    const o = captureOptions(c, h.table);
+    if (o.length <= 1) { sel = null; pick = []; return act({ t: 'play', card: c, take: o[0] || [] }); }
+    sel = c; pick = []; renderGame();
   };
-  $('#acts').onclick = e => {
-    const b = e.target.closest('button'); if (!b) return;
-    const card = sel; sel = null;
-    if (b.dataset.act === 'play') return act({ t: 'play', card });
-    act({ t: 'play', card, take: b.dataset.take === '' ? [] : opts[+b.dataset.take] });
+  const tbl = $('#tbl');
+  if (tbl) tbl.onclick = e => {
+    const b = e.target.closest('button[data-t]'); if (!b || !sel) return;
+    const c = b.dataset.t; if (!optCards.has(c)) return;
+    pick = pick.includes(c) ? pick.filter(x => x !== c) : [...pick, c];
+    if (!opts.some(o => pick.every(x => o.includes(x)))) pick = [c];
+    const done = opts.find(o => o.length === pick.length && pick.every(x => o.includes(x)));
+    if (done) { const card = sel; sel = null; pick = []; return act({ t: 'play', card, take: done }); }
+    renderGame();
   };
   const nx = $('#nexthand'); if (nx) nx.onclick = () => act({ t: 'next' });
   const rv = $('#rematch'); if (rv) rv.onclick = () => act({ t: 'rematch' });
@@ -818,18 +876,18 @@ function renderGame() {
 function resultHTML(s) {
   const r = s.result, T = [...Array(nTeams(s)).keys()], over = s.status === 'over', bris = s.game === 'briscola';
   const head = T.map(t => `<th>${esc(teamName(s, t))}</th>`).join('');
-  const rows = r.rows.map(row => `<tr><td>${row.k}</td>${T.map(t => `<td class="${row.w === t ? 'win' : ''}">${row.v[t]}</td>`).join('')}</tr>`).join('');
+  const rows = r.rows.map((row, i) => `<tr class="reveal" style="animation-delay:${i * 350}ms"><td>${row.k}</td>${T.map(t => `<td class="${row.w === t ? 'win' : ''}">${row.v[t]}</td>`).join('')}</tr>`).join('');
   let foot, title;
   if (bris) {
     foot = `<tr class="tot"><td>Partite vinte</td>${T.map(t => `<td>${s.scores[t]}</td>`).join('')}</tr>`;
     title = over ? `Vince ${esc(teamName(s, s.winner))}!` : r.handWinner >= 0 ? `Mano a ${esc(teamName(s, r.handWinner))}` : 'Pareggio';
   } else {
-    foot = `<tr class="tot"><td>Punti mano</td>${T.map(t => `<td>+${r.pts[t]}</td>`).join('')}</tr><tr class="tot"><td>Totale</td>${T.map(t => `<td>${s.scores[t]} / ${s.target}</td>`).join('')}</tr>`;
-    title = over ? `Vince ${esc(teamName(s, s.winner))}!` : 'Conta dei punti';
+    foot = `<tr class="tot reveal" style="animation-delay:${r.rows.length * 350}ms"><td>Punti mano</td>${T.map(t => `<td>+${r.pts[t]}</td>`).join('')}</tr><tr class="tot"><td>Totale</td>${T.map(t => `<td>${s.scores[t]} / ${s.target}</td>`).join('')}</tr>`;
+    title = over ? `Vince ${esc(teamName(s, s.winner))}!` : 'Conta punti';
   }
   const sweep = !bris && s.hand.sweep ? `<p class="muted small">Le ${s.hand.sweep.n} carte rimaste in tavola vanno a ${esc(teamName(s, s.hand.sweep.team))}, l'ultimo a prendere.</p>` : '';
   return `<div class="overlay"><div class="panel" role="dialog" aria-label="Risultato">
-    <div class="eyebrow">${over ? 'Partita finita' : GAMES[s.game].name + ' · fine della mano ' + s.hand.handNo}</div>
+    <div class="eyebrow">${over ? 'Partita finita · conta punti' : GAMES[s.game].name + ' · fine della mano ' + s.hand.handNo}</div>
     <h2>${title}</h2>${sweep}
     <div class="tbl-wrap"><table><thead><tr><th></th>${head}</tr></thead><tbody>${rows}${foot}</tbody></table></div>
     ${over ? '<button id="rematch">Rivincita</button>' : '<button id="nexthand">Prossima mano</button>'}
