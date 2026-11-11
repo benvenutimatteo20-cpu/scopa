@@ -681,8 +681,8 @@ const randToken = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), b
 const peerId = code => 'scopa-tra-amici-' + code.toLowerCase();
 const TABLE = 'MGX7K';   // one shared table for the group: whoever opens the app finds the game here
 const inviteLink = () => location.origin + location.pathname;
-const AV = ['#e6b450', '#e98a6b', '#8fc7e8', '#a9d98b'];
-const avatar = (nick, seat) => `<span class="avatar" style="--av:${AV[seat % 4]}">${esc((nick || '?').trim().charAt(0).toUpperCase())}</span>`;
+const AV = ['#e6b450', '#e98a6b', '#8fc7e8', '#a9d98b', '#d39be8', '#7fd6c2'];
+const avatar = (nick, seat) => `<span class="avatar" style="--av:${AV[seat % AV.length]}">${esc((nick || '?').trim().charAt(0).toUpperCase())}</span>`;
 async function keepAwake() { try { await navigator.wakeLock?.request('screen'); } catch {} }
 // A phone that sleeps or switches app silently loses its link to the broker. peerHealthy() nudges it back and,
 // if it stays broken for 10 s, throws it away so the caller builds a fresh one.
@@ -893,10 +893,10 @@ function probeOnce() {
 
 // ================= Players & win history =================
 // Each phone keeps the list of finished matches; phones merge their lists whenever they play together.
-const VERSION = 23;
-const NAMES = ['Maurizio', 'Giancarlo', 'Ospite 1', 'Ospite 2'];
-const REGULARS = ['Maurizio', 'Giancarlo'];
-const allowedNames = n => NAMES.slice(0, Math.max(2, n));   // 2: Maurizio e Giancarlo · 3: + Ospite 1 · 4: + Ospite 2
+const VERSION = 24;
+const NAMES = ['Maurizio', 'Giancarlo', 'Matteo', 'Linda', 'Ospite 1', 'Ospite 2'];
+const REGULARS = ['Maurizio', 'Giancarlo', 'Matteo', 'Linda'];
+const allowedNames = n => NAMES;   // chiunque della lista può giocare, nomi unici al tavolo
 const myName = () => NAMES.includes(lsGet('scopa.nick')) ? lsGet('scopa.nick') : NAMES[0];
 // Raising HIST_EPOCH resets the win counter on every phone: older matches are ignored even if another phone sends them.
 const HIST_EPOCH = 2;   // 1 = azzerato il 10/11/2026 · 2 = azzerato di nuovo il 10/11/2026
@@ -1008,7 +1008,7 @@ function renderOnline() {
   box.innerHTML = `<form class="panel live" novalidate>
       <div class="row"><span class="dot"></span><div class="eyebrow grow">Partita online</div><span class="pill">${o.players.length}/${o.nPlayers}</span></div>
       <h2>${GAMES[o.game]?.name || 'Partita'} di ${esc(o.host)}</h2>
-      <p class="muted small">${inGame ? 'In corso: puoi rientrare se ci stavi giocando.' : o.free.length ? 'Posti liberi per: ' + o.free.map(esc).join(', ') : 'Tavolo al completo.'} · ${targetLabel(o)}</p>
+      <p class="muted small">${inGame ? 'In corso: puoi rientrare se ci stavi giocando.' : o.free.length ? 'Posti liberi: ' + (o.nPlayers - o.players.length) : 'Tavolo al completo.'} · ${targetLabel(o)}</p>
       <div class="row">${who}</div>
       <label for="jpw">Password<input id="jpw" type="password" autocomplete="off" placeholder="Te l'ha detta ${esc(o.host)}" value="${esc(pw)}"></label>
       <p class="err" id="jerr"></p>
