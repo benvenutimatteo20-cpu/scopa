@@ -572,7 +572,7 @@ const cardHTML = (id, cls = '') => `<div class="card s-${suit(id)} ${cls}" role=
 const backHTML = (cls = '') => `<div class="card back ${cls}" aria-hidden="true"></div>`;
 const suitIcon = s => `<svg viewBox="${PIPS[s][0]}" aria-hidden="true"><use href="#pip-${s}"/></svg>`;
 // Cards from the players' own photos: cards/<id>.jpg (separate files, so the phone caches them), drawn inside the card frame
-const PHOTOS = new Set(["b1", "b10", "b2", "b3", "b4", "b5", "b6", "b7", "b8", "b9", "c10", "c2", "c3", "c4", "c5", "c6", "c7", "c8", "c9", "d1", "d10", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "s1", "s10", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9"]);
+const PHOTOS = new Set(["c1", "b1", "b10", "b2", "b3", "b4", "b5", "b6", "b7", "b8", "b9", "c10", "c2", "c3", "c4", "c5", "c6", "c7", "c8", "c9", "d1", "d10", "d2", "d3", "d4", "d5", "d6", "d7", "d8", "d9", "s1", "s10", "s2", "s3", "s4", "s5", "s6", "s7", "s8", "s9"]);
 const PHOTO_V = 1;   // bump when a photo changes, to refresh phone caches
 // warm the cache once the page is idle, so no card pops in during the first hand
 addEventListener('load', () => setTimeout(() => PHOTOS.forEach(id => { const i = new Image(); i.decoding = 'async'; i.src = `cards/${id}.jpg?v=${PHOTO_V}`; }), 600));
@@ -980,7 +980,7 @@ function probeOnce() {
 
 // ================= Players & win history =================
 // Each phone keeps the list of finished matches; phones merge their lists whenever they play together.
-const VERSION = 43;
+const VERSION = 44;
 const NAMES = ['Maurizio', 'Giancarlo', 'Matteo', 'Linda', 'Ospite 1', 'Ospite 2'];
 const REGULARS = ['Maurizio', 'Giancarlo', 'Matteo', 'Linda'];
 const allowedNames = n => NAMES;   // chiunque della lista può giocare, nomi unici al tavolo
