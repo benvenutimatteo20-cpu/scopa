@@ -935,7 +935,7 @@ function probeOnce() {
 
 // ================= Players & win history =================
 // Each phone keeps the list of finished matches; phones merge their lists whenever they play together.
-const VERSION = 29;
+const VERSION = 30;
 const NAMES = ['Maurizio', 'Giancarlo', 'Matteo', 'Linda', 'Ospite 1', 'Ospite 2'];
 const REGULARS = ['Maurizio', 'Giancarlo', 'Matteo', 'Linda'];
 const allowedNames = n => NAMES;   // chiunque della lista può giocare, nomi unici al tavolo
@@ -961,25 +961,19 @@ function recordIfOver(s) {
 }
 function dashboardHTML() {
   const h = loadHist();
-  const count = (nm, g) => h.filter(m => (!g || m.game === g) && m.winners.includes(nm)).length;
-  const rows = REGULARS.map(nm => `<tr><td>${avatar(nm, NAMES.indexOf(nm))} ${nm}</td><td>${count(nm, 'briscola')}</td><td>${count(nm, 'scopa')}</td><td class="win">${count(nm)}</td></tr>`).join('');
   // Head to head: in every finished series, each winner beats each loser who sat at the table (teammates don't count against each other)
   const beat = (a, b, g) => h.filter(m => (!g || m.game === g) && m.players.includes(a) && m.players.includes(b) && m.winners.includes(a) && !m.winners.includes(b)).length;
   const pairs = [];
   for (let i = 0; i < REGULARS.length; i++) for (let j = i + 1; j < REGULARS.length; j++) {
     const a = REGULARS[i], b = REGULARS[j], wa = beat(a, b), wb = beat(b, a);
-    if (wa + wb) pairs.push({ a, b, wa, wb });
+    pairs.push({ a, b, wa, wb });   // every pair of the four, even at 0–0
   }
-  pairs.sort((x, y) => (y.wa + y.wb) - (x.wa + x.wb));
   const side = (nm, w, lead) => `<div class="h2h-p ${lead ? 'lead' : ''}">${avatar(nm, NAMES.indexOf(nm))}<span>${nm}</span></div>`;
-  const h2h = pairs.length ? pairs.map(({ a, b, wa, wb }) => `<div class="h2h">
+  const h2h = pairs.map(({ a, b, wa, wb }) => `<div class="h2h">
       <div class="h2h-row">${side(a, wa, wa > wb)}<div class="h2h-score"><b class="${wa > wb ? 'lead' : ''}">${wa}</b><i>–</i><b class="${wb > wa ? 'lead' : ''}">${wb}</b></div>${side(b, wb, wb > wa)}</div>
-      <div class="h2h-sub">Briscola ${beat(a, b, 'briscola')}–${beat(b, a, 'briscola')} · Scopa ${beat(a, b, 'scopa')}–${beat(b, a, 'scopa')}</div></div>`).join('')
-    : `<p class="muted small" style="text-align:center;margin:6px 0 0">Nessuna sfida ancora: giocate una partita!</p>`;
-  return `<div class="panel dash"><div class="row"><h3 class="grow">Sfide</h3><span class="pill">${h.length} giocate</span></div>
-    <div class="h2h-list">${h2h}</div>
-    <h3 class="dash-sub">Vittorie totali</h3>
-    <div class="tbl-wrap"><table><thead><tr><th></th><th>Briscola</th><th>Scopa</th><th>Totale</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+      <div class="h2h-sub">Briscola ${beat(a, b, 'briscola')}–${beat(b, a, 'briscola')} · Scopa ${beat(a, b, 'scopa')}–${beat(b, a, 'scopa')}</div></div>`).join('');
+  return `<div class="panel dash"><div class="row"><h3 class="grow">Sfide tra noi</h3><span class="pill">${h.length} giocate</span></div>
+    <div class="h2h-list">${h2h}</div></div>`;
 }
 
 // ================= Views =================
