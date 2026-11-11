@@ -201,6 +201,19 @@ th{font-size:.78rem; color:var(--muted)}
 th:first-child,td:first-child{text-align:left}
 .dash td:first-child{display:flex; align-items:center; gap:8px; font-weight:700}
 .dash .avatar{width:26px; height:26px; font-size:.95rem}
+.h2h-list{display:grid; gap:8px; margin-top:10px}
+.h2h{background:rgba(255,255,255,.04); border:1px solid var(--line); border-radius:12px; padding:10px 12px}
+.h2h-row{display:grid; grid-template-columns:1fr auto 1fr; align-items:center; gap:8px}
+.h2h-p{display:flex; align-items:center; gap:7px; font-weight:700; font-size:.92rem; min-width:0}
+.h2h-p > span:last-child{overflow:hidden; text-overflow:ellipsis; white-space:nowrap}
+.h2h-row .h2h-p:last-child{flex-direction:row-reverse; text-align:right}
+.h2h-p.lead > span:last-child{color:var(--gold)}
+.h2h-score{display:flex; align-items:baseline; gap:6px; font-family:var(--body); font-variant-numeric:tabular-nums}
+.h2h-score b{font-size:1.5rem; font-weight:800; color:var(--muted)}
+.h2h-score b.lead{color:var(--gold)}
+.h2h-score i{font-style:normal; color:var(--muted)}
+.h2h-sub{text-align:center; color:var(--muted); font-size:.78rem; margin-top:4px}
+.dash-sub{margin:16px 0 4px; font-size:1rem}
 .dash td{font-family:var(--display); font-size:1.15rem; font-weight:700}
 .dash td:first-child{font-family:var(--body); font-size:.92rem}
 td.win{color:var(--gold); font-weight:800}
@@ -920,7 +933,7 @@ function probeOnce() {
 
 // ================= Players & win history =================
 // Each phone keeps the list of finished matches; phones merge their lists whenever they play together.
-const VERSION = 26;
+const VERSION = 27;
 const NAMES = ['Maurizio', 'Giancarlo', 'Matteo', 'Linda', 'Ospite 1', 'Ospite 2'];
 const REGULARS = ['Maurizio', 'Giancarlo', 'Matteo', 'Linda'];
 const allowedNames = n => NAMES;   // chiunque della lista può giocare, nomi unici al tavolo
@@ -948,7 +961,22 @@ function dashboardHTML() {
   const h = loadHist();
   const count = (nm, g) => h.filter(m => (!g || m.game === g) && m.winners.includes(nm)).length;
   const rows = REGULARS.map(nm => `<tr><td>${avatar(nm, NAMES.indexOf(nm))} ${nm}</td><td>${count(nm, 'briscola')}</td><td>${count(nm, 'scopa')}</td><td class="win">${count(nm)}</td></tr>`).join('');
-  return `<div class="panel dash"><div class="row"><h3 class="grow">Partite vinte</h3><span class="pill">${h.length} giocate</span></div>
+  // Head to head: in every finished series, each winner beats each loser who sat at the table (teammates don't count against each other)
+  const beat = (a, b, g) => h.filter(m => (!g || m.game === g) && m.players.includes(a) && m.players.includes(b) && m.winners.includes(a) && !m.winners.includes(b)).length;
+  const pairs = [];
+  for (let i = 0; i < REGULARS.length; i++) for (let j = i + 1; j < REGULARS.length; j++) {
+    const a = REGULARS[i], b = REGULARS[j], wa = beat(a, b), wb = beat(b, a);
+    if (wa + wb) pairs.push({ a, b, wa, wb });
+  }
+  pairs.sort((x, y) => (y.wa + y.wb) - (x.wa + x.wb));
+  const side = (nm, w, lead) => `<div class="h2h-p ${lead ? 'lead' : ''}">${avatar(nm, NAMES.indexOf(nm))}<span>${nm}</span></div>`;
+  const h2h = pairs.length ? pairs.map(({ a, b, wa, wb }) => `<div class="h2h">
+      <div class="h2h-row">${side(a, wa, wa > wb)}<div class="h2h-score"><b class="${wa > wb ? 'lead' : ''}">${wa}</b><i>–</i><b class="${wb > wa ? 'lead' : ''}">${wb}</b></div>${side(b, wb, wb > wa)}</div>
+      <div class="h2h-sub">Briscola ${beat(a, b, 'briscola')}–${beat(b, a, 'briscola')} · Scopa ${beat(a, b, 'scopa')}–${beat(b, a, 'scopa')}</div></div>`).join('')
+    : `<p class="muted small" style="text-align:center;margin:6px 0 0">Nessuna sfida ancora: giocate una partita!</p>`;
+  return `<div class="panel dash"><div class="row"><h3 class="grow">Sfide</h3><span class="pill">${h.length} giocate</span></div>
+    <div class="h2h-list">${h2h}</div>
+    <h3 class="dash-sub">Vittorie totali</h3>
     <div class="tbl-wrap"><table><thead><tr><th></th><th>Briscola</th><th>Scopa</th><th>Totale</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
 }
 
