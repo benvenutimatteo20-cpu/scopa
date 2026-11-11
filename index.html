@@ -130,7 +130,7 @@ label{display:flex; flex-direction:column; gap:7px; font-size:.82rem; color:var(
 .tablecards{row-gap:var(--tg, 8px); align-content:safe center; overflow-y:auto; overflow-x:hidden}
 .tablecards .card.opt{box-shadow:0 0 0 3px var(--gold), 0 8px 18px rgba(0,0,0,.4); transform:translateY(-3px)}
 .fresh{animation:drop .4s ease}
-.tablecards .card.taking{box-shadow:0 0 0 3px var(--gold), 0 0 22px rgba(230,180,80,.75); animation:taking 1.5s ease forwards}
+.tablecards .card.taking{box-shadow:0 0 0 3px var(--gold), 0 0 22px rgba(230,180,80,.75); animation:taking 1.2s ease forwards}
 .tablecards .card.incoming{box-shadow:0 0 0 3px var(--danger), 0 0 18px rgba(239,125,114,.6)}
 @keyframes taking{0%,70%{transform:translateY(-4px); opacity:1}100%{transform:translateY(-14px) scale(.9); opacity:.25}}
 @keyframes drop{from{transform:translateY(-26px) scale(1.08); opacity:.2}to{opacity:1}}
@@ -807,8 +807,9 @@ function onHostMsg(c, m) {
 }
 function handleAction(seat, m) {
   if (m.t === 'play') {
-    if (S.game === 'briscola') { if (!validBriscola(S, seat, m.card)) return; playBriscola(S, seat, m.card); }
-    else { if (!validScopa(S, seat, m.card, m.take)) return; playScopa(S, seat, m.card, m.take); }
+    const ok = S.game === 'briscola' ? validBriscola(S, seat, m.card) : validScopa(S, seat, m.card, m.take);
+    if (!ok) { const c = conns[seat]; if (c && c.open) { try { c.send({ t: 'state', v: viewFor(seat), rej: 1 }); } catch {} } return; }
+    if (S.game === 'briscola') playBriscola(S, seat, m.card); else playScopa(S, seat, m.card, m.take);
   }
   else if (m.t === 'next') {
     if (S.status === 'gameEnd') { for (let t = 0; t < nTeams(S); t++) S.scores[t] = 0; S.gameNo = (S.gameNo || 1) + 1; S.hand.handNo = 0; }
@@ -857,7 +858,7 @@ function startGuest(c, pw, nick) {
     conn.on('data', m => {
       lastHeard = Date.now();
       if (m?.t === 'pong') { if (!netOk) { netOk = true; render(); } return; }
-      if (m?.t === 'state') { V = m.v; mySeat = V.mySeat; netOk = true; render(); }
+      if (m?.t === 'state') { clearTimeout(optiT); if (m.rej) optiSeq = -1; V = m.v; mySeat = V.mySeat; netOk = true; render(); }
       else if (m?.t === 'hist') mergeHist(m.h);
       else if (m?.t === 'err') { stopGuest(); goHome(m.m); }
     });
@@ -866,6 +867,28 @@ function startGuest(c, pw, nick) {
   connect();
 }
 function stopGuest() { role = null; clearTimeout(retryT); try { conn?.close(); } catch {} try { peer?.destroy(); } catch {} peer = null; conn = null; lsDel('scopa.guest'); }
+// A guest's card leaves the hand at once; the host's state replaces this guess when it arrives (usually a fraction of a second).
+let optiSeq = -1, optiT = null, realV = null;
+function playCard(card, take) {
+  if (role === 'guest' && conn && conn.open && V?.hand) {
+    realV = V; const g = clone(V), h = g.hand, my = mySeat;
+    h.hands[my] = h.hands[my].filter(c => c !== card);
+    if (g.game === 'briscola') {
+      h.trick.push({ seat: my, card });
+      if (h.trick.length === g.nPlayers) { h.trickDone = true; h.trickWinner = trickWinner(h); } else h.turn = (my + 1) % g.nPlayers;
+      SFX.play();
+    } else {
+      if (take.length) h.table = h.table.filter(c => !take.includes(c)); else h.table.push(card);
+      h.lastMove = { seat: my, card, take, scopa: false };
+      h.turn = (my + 1) % g.nPlayers;
+      SFX.play(); if (take.length) SFX.take(.08);
+    }
+    optiSeq = V.hand.seq + 1; V = g;
+    clearTimeout(optiT); optiT = setTimeout(() => { if (V === g) { V = realV; optiSeq = -1; render(); toast('La mossa non è arrivata: riprova.'); } }, 4000);
+    render();
+  }
+  act({ t: 'play', card, take });
+}
 function act(m) { if (role === 'host') handleAction(0, m); else if (conn && conn.open) conn.send(m); else toast('Non sei collegato: aspetta qualche secondo.'); }
 
 // ================= Finding the open game =================
@@ -897,7 +920,7 @@ function probeOnce() {
 
 // ================= Players & win history =================
 // Each phone keeps the list of finished matches; phones merge their lists whenever they play together.
-const VERSION = 25;
+const VERSION = 26;
 const NAMES = ['Maurizio', 'Giancarlo', 'Matteo', 'Linda', 'Ospite 1', 'Ospite 2'];
 const REGULARS = ['Maurizio', 'Giancarlo', 'Matteo', 'Linda'];
 const allowedNames = n => NAMES;   // chiunque della lista può giocare, nomi unici al tavolo
@@ -931,7 +954,7 @@ function dashboardHTML() {
 
 // ================= Views =================
 const app = $('#app');
-let pv = null, pvT = null, shownTable = [];   // pv: an opponent's capture held on the table for a moment before the cards leave
+let pv = null, pvT = null, shownTable = [], freshShown = null;   // pv: an opponent's capture held on the table for a moment before the cards leave
 let sel = null, pick = [], createN = 2, createGame = lsGet('scopa.game') || 'scopa', homeTab = '', homeErr = '', seenSeq = null, flashT = null;
 function setErr(t) { const e = $('#jerr'); if (e) e.textContent = t; else toast(t); }
 function goHome(err = '') {
@@ -1147,11 +1170,12 @@ function soundFor(s) {
   if (prev.status === 'gameEnd' && key.status === 'playing') announce('Partita ' + (s.gameNo || 2), 'Si riparte da 0 a 0');
   if (key.hand !== prev.hand || (prev.status !== 'playing' && key.status === 'playing')) return SFX.deal(s.game === 'scopa' ? 7 : 6);
   if (key.seq === prev.seq) return;
-  if (s.game === 'briscola') { if (key.trick === 0 && prev.trick > 0) { SFX.take(); if (h.hands[mySeat]?.length) SFX.deal(s.nPlayers); } else SFX.play(); return; }
+  const mine = key.seq === optiSeq; if (mine) optiSeq = -1;   // already heard when the card was tapped
+  if (s.game === 'briscola') { if (key.trick === 0 && prev.trick > 0) { SFX.take(); if (h.hands[mySeat]?.length) SFX.deal(s.nPlayers); } else if (!mine) SFX.play(); return; }
   const m = h.lastMove; if (!m) return;
-  SFX.play();
-  const later = m.seat !== mySeat && m.take.length && s.status === 'playing' ? 1.4 : 0;   // opponent captures leave the table after a pause
-  if (m.take.length) SFX.take(.08 + later);
+  if (!mine) SFX.play();
+  const later = m.seat !== mySeat && m.take.length && s.status === 'playing' ? 1.1 : 0;   // opponent captures leave the table after a pause
+  if (m.take.length && !mine) SFX.take(.08 + later);
   if (m.scopa) setTimeout(() => SFX.scopa(), later * 1000);
   if (prev.mine === 0 && key.mine === 3) setTimeout(() => SFX.deal(s.nPlayers * 3), 450);   // new 3 cards each mid-hand
 }
@@ -1175,7 +1199,7 @@ function maybeFlash(s) {
     // show the played card landing next to what it takes, highlighted, then clear the table
     const base = m.take.every(c => shownTable.includes(c)) && h.table.every(c => shownTable.includes(c)) ? shownTable.slice() : [...h.table, ...m.take];
     pv = { seq: h.seq, table: base, card: m.card, take: m.take, seat: m.seat };
-    clearTimeout(pvT); pvT = setTimeout(() => { pv = null; if (V && role) { render(); if (m.scopa) flashMove(V, m); } }, m.scopa ? 1700 : 1500);
+    clearTimeout(pvT); pvT = setTimeout(() => { pv = null; if (V && role) { render(); if (m.scopa) flashMove(V, m); } }, m.scopa ? 1500 : 1200);
     return;
   }
   flashMove(s, m);
@@ -1252,11 +1276,12 @@ function renderGame() {
     felt += h.deck.length ? `<div class="deck-wrap">${cardHTML(h.briscola, 'trump')}${deckPile}</div>` : '';
     felt += h.trick.map(t => {
       const rel = (t.seat - my + n) % n;
-      return `<div class="slot ${slotFor(rel, n)}">${cardHTML(t.card, (h.trickDone && t.seat === h.trickWinner ? 'win ' : '') + (t === h.trick[h.trick.length - 1] && !h.trickDone ? 'fresh' : ''))}<span class="who">${rel === 0 ? 'Tu' : esc(s.players[t.seat].nick)}</span></div>`;
+      return `<div class="slot ${slotFor(rel, n)}">${cardHTML(t.card, (h.trickDone && t.seat === h.trickWinner ? 'win ' : '') + (t === h.trick[h.trick.length - 1] && !h.trickDone && h.handNo + t.card !== freshShown && (freshShown = h.handNo + t.card) ? 'fresh' : ''))}<span class="who">${rel === 0 ? 'Tu' : esc(s.players[t.seat].nick)}</span></div>`;
     }).join('');
     if (!h.trick.length) felt += `<div class="empty-felt">${myTurn ? 'Gioca tu' : ''}</div>`;
   } else {
-    const fresh = h.lastMove && !h.lastMove.take.length ? h.lastMove.card : null;
+    let fresh = h.lastMove && !h.lastMove.take.length ? h.lastMove.card : null;
+    if (fresh && h.handNo + fresh === freshShown) fresh = null; else if (fresh && !pv) freshShown = h.handNo + fresh;
     if (pv) felt += `<div class="tablecards">${pv.table.map(c => cardHTML(c, pv.take.includes(c) ? 'taking' : '')).join('')}${cardHTML(pv.card, 'fresh incoming')}</div>`;
     else felt += h.table.length ? `<div class="tablecards" id="tbl">${h.table.map(c => `<button class="card s-${suit(c)} ${pick.includes(c) ? 'picked ' : fitCards.has(c) ? 'opt ' : ''}${c === fresh ? 'fresh' : ''}" data-t="${c}" ${optCards.has(c) ? '' : 'tabindex="-1"'} aria-label="${cardName(c)}">${cardInner(c)}</button>`).join('')}</div>` : `<div class="empty-felt">Tavolo vuoto</div>`;
   }
@@ -1285,10 +1310,10 @@ function renderGame() {
   $('#hand').onclick = e => {
     const b = e.target.closest('button[data-c]'); if (!b || !myTurn) return;
     const c = b.dataset.c;
-    if (bris) return act({ t: 'play', card: c });
+    if (bris) return playCard(c, []);
     if (sel === c) { sel = null; pick = []; return renderGame(); }   // tap again to cancel the choice
     const o = captureOptions(c, h.table);
-    if (o.length <= 1) { sel = null; pick = []; return act({ t: 'play', card: c, take: o[0] || [] }); }
+    if (o.length <= 1) { sel = null; pick = []; return playCard(c, o[0] || []); }
     sel = c; pick = []; SFX.tick(); renderGame();
   };
   const tbl = $('#tbl');
@@ -1298,7 +1323,7 @@ function renderGame() {
     pick = pick.includes(c) ? pick.filter(x => x !== c) : [...pick, c]; SFX.tick();
     if (!opts.some(o => pick.every(x => o.includes(x)))) pick = [c];
     const done = opts.find(o => o.length === pick.length && pick.every(x => o.includes(x)));
-    if (done) { const card = sel; sel = null; pick = []; return act({ t: 'play', card, take: done }); }
+    if (done) { const card = sel; sel = null; pick = []; return playCard(card, done); }
     renderGame();
   };
   const nx = $('#nexthand'); if (nx) nx.onclick = () => act({ t: 'next' });
