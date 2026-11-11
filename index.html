@@ -130,6 +130,9 @@ label{display:flex; flex-direction:column; gap:7px; font-size:.82rem; color:var(
 .tablecards{row-gap:var(--tg, 8px); align-content:safe center; overflow-y:auto; overflow-x:hidden}
 .tablecards .card.opt{box-shadow:0 0 0 3px var(--gold), 0 8px 18px rgba(0,0,0,.4); transform:translateY(-3px)}
 .fresh{animation:drop .4s ease}
+.tablecards .card.taking{box-shadow:0 0 0 3px var(--gold), 0 0 22px rgba(230,180,80,.75); animation:taking 1.5s ease forwards}
+.tablecards .card.incoming{box-shadow:0 0 0 3px var(--danger), 0 0 18px rgba(239,125,114,.6)}
+@keyframes taking{0%,70%{transform:translateY(-4px); opacity:1}100%{transform:translateY(-14px) scale(.9); opacity:.25}}
 @keyframes drop{from{transform:translateY(-26px) scale(1.08); opacity:.2}to{opacity:1}}
 .empty-felt{position:absolute; inset:0; display:grid; place-items:center; color:rgba(246,238,220,.28); font-family:var(--display); font-size:1.6rem; font-style:italic}
 .deck{position:absolute; left:10px; bottom:10px; width:calc(var(--dw) + 6px); height:calc(var(--dw)*1.6 + 4px)}
@@ -247,23 +250,24 @@ function denaroSVG(simple) {
       <g ${k} stroke-width=".45"><ellipse cx="17.3" cy="18.7" rx="1.35" ry=".78" fill="#f6e6c6"/><ellipse cx="22.7" cy="18.7" rx="1.35" ry=".78" fill="#f6e6c6"/></g>
       <circle cx="17.4" cy="18.7" r=".45" fill="#1a1714"/><circle cx="22.6" cy="18.7" r=".45" fill="#1a1714"/></g>`;
   if (simple) {   // small coins on number cards: fewer, bigger details so they stay readable
-    let dots = ''; for (let i = 0; i < 12; i++) { const [x, y] = pt(15.2, i / 12 * 2 * Math.PI); dots += `<circle cx="${x}" cy="${y}" r="2.1"/>`; }
-    return `<circle cx="20" cy="20" r="19" fill="${Yc}" ${k} stroke-width="1.2"/>
-      <g fill="${Yc}" ${k} stroke-width=".8">${dots}</g>
+    let dots = ''; for (let i = 0; i < 12; i++) { const [x, y] = pt(14.9, i / 12 * 2 * Math.PI); dots += `<circle cx="${x}" cy="${y}" r="2.15"/>`; }
+    return `<circle cx="20" cy="20" r="19.2" fill="${Yc}" ${k} stroke-width="1"/><circle cx="20" cy="20" r="17.8" fill="#1a1714"/>
+      <g fill="${Yc}">${dots}</g>
       <circle cx="20" cy="20" r="11.6" fill="${Yc}" ${k} stroke-width=".9"/>
       <circle cx="20" cy="20" r="9.6" fill="${Rc}" ${k} stroke-width="1"/>${face(1.22)}`;
   }
   let outer = '', inner = '', zig = '';
-  for (let i = 0; i < 18; i++) { const [x, y] = pt(15.9, i / 18 * 2 * Math.PI); outer += `<circle cx="${x}" cy="${y}" r="1.8"/>`; }
+  for (let i = 0; i < 18; i++) { const [x, y] = pt(16.1, i / 18 * 2 * Math.PI); outer += `<circle cx="${x}" cy="${y}" r="1.75"/>`; }
   for (let i = 0; i < 14; i++) { const [x, y] = pt(9.15, (i + .5) / 14 * 2 * Math.PI); inner += `<circle cx="${x}" cy="${y}" r="1.05"/>`; }
   for (let i = 0; i <= 36; i++) { const [x, y] = pt(i % 2 ? 10.55 : 13.65, i / 36 * 2 * Math.PI); zig += (i ? 'L' : 'M') + x + ' ' + y; }
-  return `<circle cx="20" cy="20" r="19.3" fill="${Yc}" ${k} stroke-width=".9"/>
-    <circle cx="20" cy="20" r="13.75" fill="${Yc}" ${k} stroke-width=".45"/>
-    <g fill="${Yc}" ${k} stroke-width=".38">${outer}</g>
-    <path d="${zig}Z" fill="none" ${k} stroke-width=".38" stroke-linejoin="miter"/>
-    <circle cx="20" cy="20" r="10.45" fill="${Yc}" ${k} stroke-width=".4"/>
-    <g fill="${Yc}" ${k} stroke-width=".32">${inner}</g>
-    <circle cx="20" cy="20" r="7.7" fill="${Rc}" ${k} stroke-width=".55"/>${face(1)}`;
+  return `<circle cx="20" cy="20" r="19.4" fill="${Yc}" ${k} stroke-width=".8"/>
+    <circle cx="20" cy="20" r="18.3" fill="#1a1714"/>
+    <g fill="${Yc}">${outer}</g>
+    <circle cx="20" cy="20" r="13.75" fill="none" stroke="${Yc}" stroke-width=".7"/>
+    <path d="${zig}Z" fill="${Yc}" stroke="#1a1714" stroke-width=".3" stroke-linejoin="miter"/>
+    <circle cx="20" cy="20" r="10.45" fill="#1a1714"/>
+    <g fill="${Yc}">${inner}</g>
+    <circle cx="20" cy="20" r="7.7" fill="${Rc}" stroke="${Yc}" stroke-width=".7"/>${face(1)}`;
 }
 // Coppa: Piacentine vase — red open rim, yellow leaf band with medallion, side knobs, olive band, red fluted bowl,
 // beaded stem and a foot with a decorated yellow base.
@@ -317,8 +321,8 @@ function bastoneSVG(simple) {
 function spadaSVG(simple) {
   const k = 'stroke="#1a1714"', w = simple ? 1 : .6, Yc = '#f3cf3c', Rc = '#d23a2b';
   return `
-    <path d="M8 .6L11.3 7v34.6H4.7V7z" fill="#d6e0ec" ${k} stroke-width="${w}"/>
-    ${simple ? '<path d="M8 6v34" stroke="#7f95b3" stroke-width="1.1"/>' : '<path d="M8 6.5v34.5" stroke="#6f86a6" stroke-width=".9"/><path d="M5.9 8v32" stroke="#fff" stroke-width=".7" opacity=".9"/><path d="M10.2 9v31" stroke="#9fb0c6" stroke-width=".5"/>'}
+    <path d="M8 .6L11.3 7v34.6H4.7V7z" fill="#3f73c0" ${k} stroke-width="${w}"/>
+    ${simple ? '<path d="M8 6v34" stroke="#1f4b8f" stroke-width="1.1"/>' : '<path d="M8 6.5v34.5" stroke="#1f4b8f" stroke-width=".9"/><path d="M5.9 8v32" stroke="#a9c8f0" stroke-width=".7" opacity=".9"/><path d="M10.2 9v31" stroke="#2a5aa0" stroke-width=".5"/>'}
     <path d="M1.6 41.2q-1.8 1.6-.4 3.4q1.6 1.2 2.8-.4h8q1.2 1.6 2.8.4q1.4-1.8-.4-3.4z" fill="${Yc}" ${k} stroke-width="${w}"/>
     ${simple ? '' : '<circle cx="1.9" cy="42.9" r=".6" fill="#b8862c"/><circle cx="14.1" cy="42.9" r=".6" fill="#b8862c"/>'}
     <rect x="5.9" y="44.6" width="4.2" height="11.8" rx=".6" fill="${Rc}" ${k} stroke-width="${w}"/>
@@ -427,12 +431,12 @@ function figureSVG(r, s) {
 // ---- Piacentine layouts. Round suits: [x, y, size]; long suits: [x, y, length, rotation].
 const L = (s, list) => list.map(([x, y, z, rot]) => pip(s, x, y, z, rot || 0)).join('');
 const ROUND = {
-  2: [[50, 44, 46], [50, 116, 46]],
-  3: [[32, 38, 36], [68, 80, 36], [32, 122, 36]],
-  4: [[28, 36, 32], [72, 36, 32], [28, 124, 32], [72, 124, 32]],
-  5: [[27, 34, 30], [73, 34, 30], [50, 80, 48], [27, 126, 30], [73, 126, 30]],
-  6: [[30, 36, 30], [70, 36, 30], [30, 80, 30], [70, 80, 30], [30, 124, 30], [70, 124, 30]],
-  7: [[50, 31, 28], [30, 63, 28], [70, 63, 28], [30, 97, 28], [70, 97, 28], [30, 130, 28], [70, 130, 28]]
+  2: [[50, 44, 54], [50, 116, 54]],
+  3: [[31, 37, 40], [69, 80, 40], [31, 123, 40]],
+  4: [[29, 35, 35], [71, 35, 35], [29, 125, 35], [71, 125, 35]],
+  5: [[28, 33, 33], [72, 33, 33], [50, 80, 52], [28, 127, 33], [72, 127, 33]],
+  6: [[30, 35, 33], [70, 35, 33], [30, 80, 33], [70, 80, 33], [30, 125, 33], [70, 125, 33]],
+  7: [[50, 30, 30], [29, 62, 30], [71, 62, 30], [29, 97, 30], [71, 97, 30], [29, 131, 30], [71, 131, 30]]
 };
 const CLUBS = {
   2: [[35, 80, 112, -4], [65, 80, 112, 4]],
@@ -893,7 +897,7 @@ function probeOnce() {
 
 // ================= Players & win history =================
 // Each phone keeps the list of finished matches; phones merge their lists whenever they play together.
-const VERSION = 24;
+const VERSION = 25;
 const NAMES = ['Maurizio', 'Giancarlo', 'Matteo', 'Linda', 'Ospite 1', 'Ospite 2'];
 const REGULARS = ['Maurizio', 'Giancarlo', 'Matteo', 'Linda'];
 const allowedNames = n => NAMES;   // chiunque della lista può giocare, nomi unici al tavolo
@@ -927,11 +931,12 @@ function dashboardHTML() {
 
 // ================= Views =================
 const app = $('#app');
+let pv = null, pvT = null, shownTable = [];   // pv: an opponent's capture held on the table for a moment before the cards leave
 let sel = null, pick = [], createN = 2, createGame = lsGet('scopa.game') || 'scopa', homeTab = '', homeErr = '', seenSeq = null, flashT = null;
 function setErr(t) { const e = $('#jerr'); if (e) e.textContent = t; else toast(t); }
 function goHome(err = '') {
   if (role === 'host') { clearTimeout(trickT); trickT = null; try { peer?.destroy(); } catch {} peer = null; }
-  role = null; V = null; S = null; homeErr = err; seenSeq = null; online = null; render();
+  role = null; V = null; S = null; homeErr = err; seenSeq = null; pv = null; clearTimeout(pvT); online = null; render();
 }
 function render() {
   app.classList.toggle('play', !!(role && V && V.status !== 'lobby'));
@@ -1145,8 +1150,9 @@ function soundFor(s) {
   if (s.game === 'briscola') { if (key.trick === 0 && prev.trick > 0) { SFX.take(); if (h.hands[mySeat]?.length) SFX.deal(s.nPlayers); } else SFX.play(); return; }
   const m = h.lastMove; if (!m) return;
   SFX.play();
-  if (m.take.length) SFX.take(.08);
-  if (m.scopa) SFX.scopa();
+  const later = m.seat !== mySeat && m.take.length && s.status === 'playing' ? 1.4 : 0;   // opponent captures leave the table after a pause
+  if (m.take.length) SFX.take(.08 + later);
+  if (m.scopa) setTimeout(() => SFX.scopa(), later * 1000);
   if (prev.mine === 0 && key.mine === 3) setTimeout(() => SFX.deal(s.nPlayers * 3), 450);   // new 3 cards each mid-hand
 }
 function announce(title, sub) {
@@ -1165,13 +1171,22 @@ function maybeFlash(s) {
   const m = h.lastMove;
   if (m.seat === mySeat && !m.scopa) return;
   if (!m.take.length) return;
+  if (m.seat !== mySeat && s.status === 'playing') {
+    // show the played card landing next to what it takes, highlighted, then clear the table
+    const base = m.take.every(c => shownTable.includes(c)) && h.table.every(c => shownTable.includes(c)) ? shownTable.slice() : [...h.table, ...m.take];
+    pv = { seq: h.seq, table: base, card: m.card, take: m.take, seat: m.seat };
+    clearTimeout(pvT); pvT = setTimeout(() => { pv = null; if (V && role) { render(); if (m.scopa) flashMove(V, m); } }, m.scopa ? 1700 : 1500);
+    return;
+  }
+  flashMove(s, m);
+}
+function flashMove(s, m) {
   const who = esc(s.players[m.seat].nick);
   const line = m.scopa && m.seat === mySeat ? pickLine(SFOTTO) : '';   // the joke goes only to whoever made the scopa
   const ms = m.scopa ? 3200 : 1900;
   const f = $('#flash');
   f.innerHTML = `<div class="box" style="animation-duration:${ms}ms">${m.scopa ? `<div class="ttl big">Scopa!</div>` : `<div class="ttl">${who} prende</div>`}
     ${line ? `<div class="quip">${esc(line.replace('{nome}', s.players[m.seat].nick))}</div>` : ''}
-    ${m.seat !== mySeat ? `<div class="cards">${cardHTML(m.card)}<span class="arrow">→</span>${m.take.map(c => cardHTML(c)).join('')}</div>` : ''}
     ${m.scopa && m.seat !== mySeat ? `<div class="muted small">${who}</div>` : ''}</div>`;
   f.hidden = false; clearTimeout(flashT); flashT = setTimeout(() => f.hidden = true, ms);
 }
@@ -1213,7 +1228,8 @@ function renderGame() {
   const s = V, h = s.hand, my = mySeat, n = s.nPlayers, myTeam = teamOf(s, my), bris = s.game === 'briscola';
   maybeFlash(s);
   soundFor(s);
-  const myTurn = s.status === 'playing' && h.turn === my && !(bris && h.trickDone);
+  if (pv && (bris || pv.seq !== h.seq)) pv = null;
+  const myTurn = s.status === 'playing' && h.turn === my && !(bris && h.trickDone) && !pv;
   const myHand = h.hands[my] || [];
   if (sel && (!myHand.includes(sel) || !myTurn)) { sel = null; pick = []; }
   const opts = !bris && sel ? captureOptions(sel, h.table) : [];
@@ -1241,11 +1257,13 @@ function renderGame() {
     if (!h.trick.length) felt += `<div class="empty-felt">${myTurn ? 'Gioca tu' : ''}</div>`;
   } else {
     const fresh = h.lastMove && !h.lastMove.take.length ? h.lastMove.card : null;
-    felt += h.table.length ? `<div class="tablecards" id="tbl">${h.table.map(c => `<button class="card s-${suit(c)} ${pick.includes(c) ? 'picked ' : fitCards.has(c) ? 'opt ' : ''}${c === fresh ? 'fresh' : ''}" data-t="${c}" ${optCards.has(c) ? '' : 'tabindex="-1"'} aria-label="${cardName(c)}">${cardInner(c)}</button>`).join('')}</div>` : `<div class="empty-felt">Tavolo vuoto</div>`;
+    if (pv) felt += `<div class="tablecards">${pv.table.map(c => cardHTML(c, pv.take.includes(c) ? 'taking' : '')).join('')}${cardHTML(pv.card, 'fresh incoming')}</div>`;
+    else felt += h.table.length ? `<div class="tablecards" id="tbl">${h.table.map(c => `<button class="card s-${suit(c)} ${pick.includes(c) ? 'picked ' : fitCards.has(c) ? 'opt ' : ''}${c === fresh ? 'fresh' : ''}" data-t="${c}" ${optCards.has(c) ? '' : 'tabindex="-1"'} aria-label="${cardName(c)}">${cardInner(c)}</button>`).join('')}</div>` : `<div class="empty-felt">Tavolo vuoto</div>`;
   }
 
   let status;
-  if (s.status !== 'playing') status = 'Mano finita';
+  if (pv) status = (n === 4 && teamOf(s, pv.seat) === myTeam ? 'Il tuo compagno' : esc(s.players[pv.seat].nick)) + ' prende';
+  else if (s.status !== 'playing') status = 'Mano finita';
   else if (bris && h.trickDone) status = h.trickWinner === my ? 'Prendi tu' : (n === 4 && teamOf(s, h.trickWinner) === myTeam ? 'Prende il tuo compagno' : 'Prende ' + esc(s.players[h.trickWinner].nick));
   else status = myTurn ? (sel ? 'Scegli sul tavolo cosa prendere' : 'Tocca a te') : 'Tocca a ' + esc(s.players[h.turn].nick);
 
@@ -1261,6 +1279,7 @@ function renderGame() {
     ${['handEnd', 'gameEnd', 'over'].includes(s.status) ? resultHTML(s) : ''}`;
   bindExit();
   fitTable();
+  if (!bris && !pv) shownTable = h.table.slice();
   $('#mute').onclick = () => { muted = !muted; lsSet('scopa.mute', muted ? '1' : '0'); if (!muted) SFX.tick(); renderGame(); };
   // One tap plays the card. Only when several captures are possible do you pick them by tapping table cards.
   $('#hand').onclick = e => {
