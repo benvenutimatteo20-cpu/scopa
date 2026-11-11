@@ -245,7 +245,9 @@ const FIG = {8:'Fante', 9:'Cavallo', 10:'Re'};
 const rank = id => +id.slice(1), suit = id => id[0];
 const cardName = id => (FIG[rank(id)] || rank(id)) + ' di ' + SUITS[suit(id)];
 function fullDeck() { const d = []; for (const s of 'dcsb') for (let r = 1; r <= 10; r++) d.push(s + r); return d; }
-function shuffle(a) { const rnd = new Uint32Array(a.length); crypto.getRandomValues(rnd); for (let i = a.length - 1; i > 0; i--) { const j = rnd[i] % (i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; }
+// Fisher–Yates with the browser's cryptographic random numbers; draws that would favour low numbers are thrown away, so every order is exactly as likely
+function randInt(n) { const b = new Uint32Array(1), lim = 4294967296 - (4294967296 % n); do crypto.getRandomValues(b); while (b[0] >= lim); return b[0] % n; }
+function shuffle(a) { for (let i = a.length - 1; i > 0; i--) { const j = randInt(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
 // Piacentine-style deck, drawn from scratch: white cards, Spanish suits (straight swords, knotted clubs),
 // red/blue/yellow/green palette, corner numbers, pips laid out by count, full-length figures.
@@ -745,7 +747,7 @@ function viewFor(seat) {
   delete v.password;
   v.players = v.players.map(p => ({ seat: p.seat, nick: p.nick, online: p.seat === 0 ? true : !!(conns[p.seat] && conns[p.seat].open) }));
   if (v.hand) {
-    v.hand.deck = v.hand.deck.length ? ['x'] : [];       // only "is there a deck", never how many
+    v.hand.deck = v.hand.deck.length > 1 ? ['x', 'x'] : v.hand.deck.length ? ['x'] : [];   // never how many: only "cards left" or "just the face-up briscola"
     for (const k of Object.keys(v.hand.hands)) if (+k !== seat) v.hand.hands[k] = Array(S.hand.hands[k].length).fill('x');
     if (v.status === 'playing') { v.hand.caps = {}; v.hand.piles = {}; v.hand.scope = {}; }
   }
@@ -933,7 +935,7 @@ function probeOnce() {
 
 // ================= Players & win history =================
 // Each phone keeps the list of finished matches; phones merge their lists whenever they play together.
-const VERSION = 28;
+const VERSION = 29;
 const NAMES = ['Maurizio', 'Giancarlo', 'Matteo', 'Linda', 'Ospite 1', 'Ospite 2'];
 const REGULARS = ['Maurizio', 'Giancarlo', 'Matteo', 'Linda'];
 const allowedNames = n => NAMES;   // chiunque della lista può giocare, nomi unici al tavolo
@@ -1301,7 +1303,7 @@ function renderGame() {
   const deckPile = h.deck.length ? `<div class="deck">${backHTML()}${backHTML()}${backHTML()}</div>` : '';
   if (bris) {
     felt += `<div class="trumpbadge">${suitIcon(suit(h.briscola))}Briscola: ${SUITS[suit(h.briscola)]}</div>`;
-    felt += h.deck.length ? `<div class="deck-wrap">${cardHTML(h.briscola, 'trump')}${deckPile}</div>` : '';
+    felt += h.deck.length ? `<div class="deck-wrap">${cardHTML(h.briscola, 'trump')}${h.deck.length > 1 ? deckPile : ''}</div>` : '';   // last draw: only the briscola is left
     felt += h.trick.map(t => {
       const rel = (t.seat - my + n) % n;
       return `<div class="slot ${slotFor(rel, n)}">${cardHTML(t.card, (h.trickDone && t.seat === h.trickWinner ? 'win ' : '') + (t === h.trick[h.trick.length - 1] && !h.trickDone && h.handNo + t.card !== freshShown && (freshShown = h.handNo + t.card) ? 'fresh' : ''))}<span class="who">${rel === 0 ? 'Tu' : esc(s.players[t.seat].nick)}</span></div>`;
