@@ -213,6 +213,7 @@ th:first-child,td:first-child{text-align:left}
 .h2h-score b.lead{color:var(--gold)}
 .h2h-score i{font-style:normal; color:var(--muted)}
 .h2h-sub{text-align:center; color:var(--muted); font-size:.78rem; margin-top:4px}
+.h2h-sub b{color:var(--ink); font-weight:700}
 .dash-sub{margin:16px 0 4px; font-size:1rem}
 .dash td{font-family:var(--display); font-size:1.15rem; font-weight:700}
 .dash td:first-child{font-family:var(--body); font-size:.92rem}
@@ -648,7 +649,7 @@ function scoreScopa(s) {
 }
 function endScopa(s) {
   const h = s.hand;
-  if (h.table.length && h.lastCapTeam >= 0) { h.caps[h.lastCapTeam].push(...h.table); h.sweep = { n: h.table.length, team: h.lastCapTeam }; h.table = []; }
+  if (h.table.length && h.lastCapTeam >= 0) { if (h.table.includes('d7') && h.lastCapSeat >= 0) tally(s, h.lastCapSeat).sette++; h.caps[h.lastCapTeam].push(...h.table); h.sweep = { n: h.table.length, team: h.lastCapTeam }; h.table = []; }
   const r = scoreScopa(s);
   for (let t = 0; t < nTeams(s); t++) s.scores[t] = (s.scores[t] || 0) + r.pts[t];
   s.result = r;
@@ -662,15 +663,18 @@ function validScopa(s, seat, card, take) {
   const key = [...take].sort().join();
   return opts.some(o => [...o].sort().join() === key);
 }
+// Running totals per player for the whole series (scope, settebello, briscola points): saved with the match for the head-to-head board
+function tally(s, seat) { s.tally ||= {}; return s.tally[seat] ||= { scope: 0, sette: 0, punti: 0 }; }
 function playScopa(s, seat, card, take) {
   const h = s.hand, team = teamOf(s, seat);
   h.hands[seat] = h.hands[seat].filter(c => c !== card);
   let scopa = false;
   if (take.length) {
     h.table = h.table.filter(c => !take.includes(c));
-    h.caps[team].push(card, ...take); h.lastCapTeam = team;
+    h.caps[team].push(card, ...take); h.lastCapTeam = team; h.lastCapSeat = seat;
+    if (card === 'd7' || take.includes('d7')) tally(s, seat).sette++;
     const lastPlay = !h.deck.length && Object.values(h.hands).every(x => !x.length);
-    if (!h.table.length && !lastPlay) { scopa = true; h.scope[team]++; }
+    if (!h.table.length && !lastPlay) { scopa = true; h.scope[team]++; tally(s, seat).scope++; }
   } else h.table.push(card);
   h.lastMove = { seat, card, take, scopa }; h.seq++;
   h.turn = (seat + 1) % s.nPlayers;
@@ -716,6 +720,7 @@ function resolveTrick(s) {
   const h = s.hand; if (!h || !h.trickDone) return;
   const w = h.trickWinner, n = s.nPlayers;
   h.piles[teamOf(s, w)].push(...h.trick.map(t => t.card));
+  tally(s, w).punti += h.trick.reduce((a, t) => a + (BPTS[rank(t.card)] || 0), 0);
   h.trick = []; h.trickDone = false; h.trickWinner = -1;
   for (let k = 0; k < n; k++) if (h.deck.length) h.hands[(w + k) % n].push(h.deck.shift());
   h.turn = w; h.seq++;
@@ -796,6 +801,7 @@ function viewFor(seat) {
     for (const k of Object.keys(v.hand.hands)) if (+k !== seat) v.hand.hands[k] = Array(S.hand.hands[k].length).fill('x');
     if (v.status === 'playing') { v.hand.caps = {}; v.hand.piles = {}; v.hand.scope = {}; }
   }
+  if (v.status !== 'over') delete v.tally;
   v.code = code; v.mySeat = seat;
   return v;
 }
@@ -879,7 +885,7 @@ function handleAction(seat, m) {
   else if (m.t === 'start' && seat === 0) {
     if (S.status !== 'lobby' || S.players.length !== S.nPlayers) return;
     S.scores = {}; S.games = {}; S.gameNo = 1; for (let t = 0; t < nTeams(S); t++) { S.scores[t] = 0; S.games[t] = 0; }
-    S.dealer = Math.floor(Math.random() * S.nPlayers); S.hand = null; S.matchId = randToken(); dealHand(S);
+    S.dealer = Math.floor(Math.random() * S.nPlayers); S.hand = null; S.matchId = randToken(); S.tally = {}; dealHand(S);
   }
   else if (m.t === 'kick' && seat === 0) {
     if (S.status !== 'lobby' || m.seat === 0) return;
@@ -980,7 +986,7 @@ function probeOnce() {
 
 // ================= Players & win history =================
 // Each phone keeps the list of finished matches; phones merge their lists whenever they play together.
-const VERSION = 44;
+const VERSION = 45;
 const NAMES = ['Maurizio', 'Giancarlo', 'Matteo', 'Linda', 'Ospite 1', 'Ospite 2'];
 const REGULARS = ['Maurizio', 'Giancarlo', 'Matteo', 'Linda'];
 const allowedNames = n => NAMES;   // chiunque della lista può giocare, nomi unici al tavolo
@@ -988,12 +994,19 @@ const myName = () => NAMES.includes(lsGet('scopa.nick')) ? lsGet('scopa.nick') :
 // Raising HIST_EPOCH resets the win counter on every phone: older matches are ignored even if another phone sends them.
 const HIST_EPOCH = 2;   // 1 = azzerato il 10/11/2026 · 2 = azzerato di nuovo il 10/11/2026
 function loadHist() { try { const h = JSON.parse(lsGet('scopa.hist') || '[]'); return Array.isArray(h) ? h.filter(m => m && m.ep === HIST_EPOCH) : []; } catch { return []; } }
+// per-player totals coming from another phone: keep only small numbers for known names
+function cleanStats(st) {
+  if (!st || typeof st !== 'object') return undefined;
+  const o = {};
+  for (const nm of NAMES) { const x = st[nm]; if (!x || typeof x !== 'object') continue; o[nm] = {}; for (const k of ['scope', 'sette', 'punti']) if (Number.isFinite(+x[k]) && x[k] !== undefined) o[nm][k] = Math.max(0, Math.min(9999, Math.round(+x[k]))); }
+  return Object.keys(o).length ? o : undefined;
+}
 function mergeHist(extra) {
   if (!Array.isArray(extra) || !extra.length) return false;
   const h = loadHist(), ids = new Set(h.map(x => x.id)); let added = false;
   for (const m of extra) {
     if (!m || m.ep !== HIST_EPOCH || typeof m.id !== 'string' || ids.has(m.id) || !GAMES[m.game] || !Array.isArray(m.winners)) continue;
-    h.push({ ep: HIST_EPOCH, id: m.id.slice(0, 40), game: m.game, at: +m.at || 0, players: (m.players || []).map(String).slice(0, 4), winners: m.winners.map(String).slice(0, 2) });
+    h.push({ ep: HIST_EPOCH, id: m.id.slice(0, 40), game: m.game, at: +m.at || 0, players: (m.players || []).map(String).slice(0, 4), winners: m.winners.map(String).slice(0, 2), st: cleanStats(m.st) });
     ids.add(m.id); added = true;
   }
   if (added) lsSet('scopa.hist', JSON.stringify(h.sort((a, b) => a.at - b.at).slice(-500)));
@@ -1002,7 +1015,8 @@ function mergeHist(extra) {
 function recordIfOver(s) {
   if (s.status !== 'over' || !s.matchId || s.winner < 0) return;
   const winners = s.players.filter(p => teamOf(s, p.seat) === s.winner).map(p => p.nick);
-  mergeHist([{ ep: HIST_EPOCH, id: s.matchId, game: s.game, at: Date.now(), players: s.players.map(p => p.nick), winners }]);
+  const st = {}; for (const p of s.players) { const t = s.tally?.[p.seat]; if (t) st[p.nick] = s.game === 'scopa' ? { scope: t.scope, sette: t.sette } : { punti: t.punti }; }
+  mergeHist([{ ep: HIST_EPOCH, id: s.matchId, game: s.game, at: Date.now(), players: s.players.map(p => p.nick), winners, st }]);
 }
 function dashboardHTML() {
   const h = loadHist();
@@ -1013,10 +1027,19 @@ function dashboardHTML() {
     const a = REGULARS[i], b = REGULARS[j], wa = beat(a, b), wb = beat(b, a);
     pairs.push({ a, b, wa, wb });   // every pair of the four, even at 0–0
   }
+  // Totals over every finished series the two played against each other (each counts only what they did themselves)
+  const both = (a, b, g) => h.filter(m => m.game === g && m.players.includes(a) && m.players.includes(b) && !(m.players.length === 4 && m.winners.includes(a) === m.winners.includes(b)));   // only as opponents, never as partners
+  const sum = (ms, nm, k) => ms.reduce((t, m) => t + (m.st?.[nm]?.[k] || 0), 0);
+  const pairStats = (a, b) => {
+    const sc = both(a, b, 'scopa'), br = both(a, b, 'briscola');
+    const line = (label, w, items) => `<div class="h2h-sub"><b>${label}</b> vinte ${w}${items.map(([k, x, y]) => ` · ${k} ${x}–${y}`).join('')}</div>`;
+    return line('Scopa', `${beat(a, b, 'scopa')}–${beat(b, a, 'scopa')}`, sc.length ? [['scope', sum(sc, a, 'scope'), sum(sc, b, 'scope')], ['settebelli', sum(sc, a, 'sette'), sum(sc, b, 'sette')]] : [])
+      + line('Briscola', `${beat(a, b, 'briscola')}–${beat(b, a, 'briscola')}`, br.length ? [['punti', sum(br, a, 'punti'), sum(br, b, 'punti')]] : []);
+  };
   const side = (nm, w, lead) => `<div class="h2h-p ${lead ? 'lead' : ''}">${avatar(nm, NAMES.indexOf(nm))}<span>${nm}</span></div>`;
   const h2h = pairs.map(({ a, b, wa, wb }) => `<div class="h2h">
       <div class="h2h-row">${side(a, wa, wa > wb)}<div class="h2h-score"><b class="${wa > wb ? 'lead' : ''}">${wa}</b><i>–</i><b class="${wb > wa ? 'lead' : ''}">${wb}</b></div>${side(b, wb, wb > wa)}</div>
-      <div class="h2h-sub">Briscola ${beat(a, b, 'briscola')}–${beat(b, a, 'briscola')} · Scopa ${beat(a, b, 'scopa')}–${beat(b, a, 'scopa')}</div></div>`).join('');
+      ${pairStats(a, b)}</div>`).join('');
   return `<div class="panel dash"><div class="row"><h3 class="grow">Sfide tra noi</h3><span class="pill">${h.length} giocate</span></div>
     <div class="h2h-list">${h2h}</div></div>`;
 }
