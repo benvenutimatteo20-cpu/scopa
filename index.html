@@ -93,7 +93,7 @@ label{display:flex; flex-direction:column; gap:7px; font-size:.82rem; color:var(
 #app.play{--H:calc(var(--vvh, 100vh) - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   max-width:1000px; height:var(--H); min-height:0; max-height:var(--H); display:grid; grid-template-rows:auto auto minmax(0,1fr) auto auto auto;
   gap:clamp(5px, calc(var(--H)*.012), 12px); overflow:hidden; padding-block:clamp(5px, calc(var(--H)*.012), 12px);
-  --hw:min(28vw, calc(var(--H)*.155), 150px); --sw:min(24vw, calc(var(--H)*.14), 130px); --dw:min(10vw, calc(var(--H)*.07), 56px); --ow:min(8vw, calc(var(--H)*.042), 40px)}
+  --hw:min(28vw, calc(var(--H)*.155), 150px); --sw:min(24vw, calc(var(--H)*.14), 130px); --dw:min(15vw, calc(var(--H)*.1), 80px); --ow:min(8vw, calc(var(--H)*.042), 40px)}
 .topbar{display:flex; align-items:center; gap:6px; min-width:0}
 .pill .cdot{display:inline-block; width:8px; height:8px; border-radius:50%; background:currentColor; margin-right:6px; vertical-align:1px}
 @media (max-width:480px){ #app.play .ctext{display:none} #app.play .pill .cdot{margin:0} #app.play .topbar .pill{padding:6px} #app.play #back{padding-inline:0; width:38px; font-size:0} #app.play #back::before{content:'←'; font-size:1.1rem} #app.play #back[data-armed='1']{width:auto; padding-inline:10px; font-size:.82rem} #app.play #back[data-armed='1']::before{content:none} .chip span{max-width:7.5em; font-size:.74rem} .chip{padding:4px 8px; gap:5px} .chip b{font-size:1.1rem} }
@@ -933,7 +933,7 @@ function probeOnce() {
 
 // ================= Players & win history =================
 // Each phone keeps the list of finished matches; phones merge their lists whenever they play together.
-const VERSION = 27;
+const VERSION = 28;
 const NAMES = ['Maurizio', 'Giancarlo', 'Matteo', 'Linda', 'Ospite 1', 'Ospite 2'];
 const REGULARS = ['Maurizio', 'Giancarlo', 'Matteo', 'Linda'];
 const allowedNames = n => NAMES;   // chiunque della lista può giocare, nomi unici al tavolo
